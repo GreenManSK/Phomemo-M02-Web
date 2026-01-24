@@ -8,7 +8,7 @@ export type ImageConversionOptions = {
     rotation: number; // number in degrees
     threshold: number; // 0-255, 0 is black, 255 is white
     invert: boolean; // if true, black becomes white and vice versa
-    algorithm: 'Basic' | 'Dither'; // conversion algorithm
+    algorithm: 'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'; // conversion algorithm
     contrast: number; // 0-2, 1 is normal contrast
     exposure: number; // 0-2, 1 is normal exposure (brightness)
     // flip: boolean; // if true, the image is flipped horizontally

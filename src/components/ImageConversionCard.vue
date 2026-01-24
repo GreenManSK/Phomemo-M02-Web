@@ -14,12 +14,12 @@ const emit = defineEmits<{
 
 
 const rotationOptions = [0, 90, 180, 270] as const;
-const algorithmOptions = ['Basic', 'Dither'] as const;
+const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
 
 const threshold = ref(128);
 const rotation = ref<number | undefined>(0);
 const invert = ref(false);
-const algorithm = ref<'Basic' | 'Dither'>('Basic');
+const algorithm = ref<'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'>('Basic');
 const contrast = ref(1.0);
 const exposure = ref(1.0);
 
@@ -70,7 +70,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     <Label class="font-medium" for="threshold">Threshold</Label>
                     <Badge variant="outline" class="text-xs font-semibold">{{ threshold }}</Badge>
                 </div>
-                <input id="threshold" type="range" min="0" max="255" v-model="threshold" class="w-full"
+                <input id="threshold" type="range" min="0" max="255" v-model.number="threshold" class="w-full"
                     @input="emit('image-conversion-options-change', imageConversionOptions)" />
             </div>
             <div class="mb-4">
