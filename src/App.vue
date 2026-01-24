@@ -9,8 +9,9 @@ import ImageConversionCard from './components/ImageConversionCard.vue';
 import AppSettings from './components/AppSettings.vue';
 import PrintButton from './components/PrintButton.vue';
 
-import { Printer } from 'lucide-vue-next';
+import { Printer, RotateCcw } from 'lucide-vue-next';
 import { Toaster } from '@/components/ui/sonner'
+import Button from './components/ui/button/Button.vue';
 
 import { defaultImageConversionOptions, type PrinterImage } from './logic/printerimage.ts';
 import { useImageConvertersStore } from './stores/imageconverter.ts';
@@ -28,15 +29,47 @@ const printerStore = usePrinterStore();
 
 const imageConversionOptions = ref(defaultImageConversionOptions);
 const imageRef = ref<HTMLImageElement | null>(null);
+const adjustedImageRef = ref<HTMLImageElement | null>(null);
+const componentKey = ref(0);
+
 async function setImage(image: HTMLImageElement) {
     imageRef.value = image;
 }
 
+async function createAdjustedImage(image: HTMLImageElement, contrast: number, exposure: number): Promise<HTMLImageElement> {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+
+    ctx.filter = `contrast(${contrast}) brightness(${exposure})`;
+    ctx.drawImage(image, 0, 0);
+    ctx.filter = 'none';
+
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = canvas.toDataURL();
+    });
+}
+
 watch([imageRef, imageConversionOptions], async () => {
     if (!imageRef.value) return;
-    const image = await createImageBitmap(imageRef.value);
     const options = JSON.parse(JSON.stringify(imageConversionOptions.value));
+
     try {
+        // Create adjusted image
+        const adjusted = await createAdjustedImage(
+            imageRef.value,
+            options.contrast,
+            options.exposure
+        );
+        adjustedImageRef.value = adjusted;
+
+        // Convert to printer image
+        const image = await createImageBitmap(imageRef.value);
         const result = await converterStore.convertImage(image, appSettings.settings.pixelPerLine, options);
         imageDataRef.value = result;
     } catch {
@@ -55,6 +88,11 @@ async function printImage() {
     }
 }
 
+function restartApp() {
+    imageConversionOptions.value = { ...defaultImageConversionOptions };
+    componentKey.value += 1; // Force re-mount of ImageConversionCard to reset UI controls
+}
+
 </script>
 
 <template>
@@ -68,16 +106,19 @@ async function printImage() {
                 <p class="app-subtitle">Mobile Recipe Printer</p>
             </div>
             <div class="app-settings-corner">
+                <Button @click="restartApp" variant="outline" size="icon" title="Reset conversion settings to defaults">
+                    <RotateCcw :size="20" />
+                </Button>
                 <AppSettings />
             </div>
         </header>
         <div class="settings-panel">
             <PrinterConnectionCard :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices" />
             <ImageDragAndDrop @imageLoaded="(image) => setImage(image)" />
-            <ImageConversionCard @image-conversion-options-change="(options) => imageConversionOptions = options" />
+            <ImageConversionCard :key="componentKey" @image-conversion-options-change="(options) => imageConversionOptions = options" />
         </div>
         <div class="preview-panel">
-            <ImagePreview :image="imageDataRef" :original-image="imageRef" style="width: 100%;" />
+            <ImagePreview :image="imageDataRef" :original-image="imageRef" :adjusted-image="adjustedImageRef" style="width: 100%;" />
             <PrintButton style="width: 100%;" :image-selected="!!imageDataRef" :connected="printerStore.isConnected"
                 @print="printImage" />
         </div>
@@ -143,6 +184,7 @@ main {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    gap: 0.5rem;
     font-size: 1.5rem;
     margin-left: 1rem;
 }

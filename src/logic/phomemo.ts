@@ -100,6 +100,7 @@ export class PhomemoPrinter {
     }
 
     async printImage(image: PrinterImage): Promise<void> {
+        await this.alignCenter(); // TODO: Test?
         if (!this.port || !this.writer) throw new Error('Not connected to printer');
         if (image.width % 8 !== 0) {
             throw new Error('Image width must be a multiple of 8');

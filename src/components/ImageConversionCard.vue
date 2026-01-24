@@ -14,15 +14,22 @@ const emit = defineEmits<{
 
 
 const rotationOptions = [0, 90, 180, 270] as const;
+const algorithmOptions = ['Basic', 'Dither'] as const;
 
 const threshold = ref(128);
 const rotation = ref<number | undefined>(0);
 const invert = ref(false);
+const algorithm = ref<'Basic' | 'Dither'>('Basic');
+const contrast = ref(1.0);
+const exposure = ref(1.0);
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
     rotation: rotation.value ?? 0,
     invert: invert.value,
+    algorithm: algorithm.value,
+    contrast: contrast.value,
+    exposure: exposure.value,
 }));
 </script>
 
@@ -33,6 +40,31 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
             <CardTitle>Select Image</CardTitle>
         </CardHeader>
         <CardContent>
+            <div class="mb-4">
+                <Label class="block mb-2 font-medium" for="algorithm">Algorithm</Label>
+                <ToggleGroup type="single" v-model="algorithm" id="algorithm">
+                    <ToggleGroupItem v-for="option in algorithmOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)">
+                        {{ option }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <Label class="font-medium" for="contrast">Contrast</Label>
+                    <Badge variant="outline" class="text-xs font-semibold">{{ contrast.toFixed(2) }}</Badge>
+                </div>
+                <input id="contrast" type="range" min="0" max="2" step="0.01" v-model.number="contrast" class="w-full"
+                    @input="emit('image-conversion-options-change', imageConversionOptions)" />
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <Label class="font-medium" for="exposure">Exposure</Label>
+                    <Badge variant="outline" class="text-xs font-semibold">{{ exposure.toFixed(2) }}</Badge>
+                </div>
+                <input id="exposure" type="range" min="0" max="2" step="0.01" v-model.number="exposure" class="w-full"
+                    @input="emit('image-conversion-options-change', imageConversionOptions)" />
+            </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <Label class="font-medium" for="threshold">Threshold</Label>

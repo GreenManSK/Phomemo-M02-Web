@@ -13,6 +13,7 @@ import TabsTrigger from './ui/tabs/TabsTrigger.vue';
 const props = defineProps<{
     image: PrinterImage | null; // Optional image prop
     originalImage: HTMLImageElement | null; // Optional original image prop
+    adjustedImage: HTMLImageElement | null; // Optional adjusted image prop (with contrast/exposure)
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -72,12 +73,18 @@ watch([canvasRef, props], async () => {
                     <TabsTrigger value="account">
                         Preview
                     </TabsTrigger>
+                    <TabsTrigger value="adjusted" :disabled="!props.adjustedImage">
+                        Adjusted
+                    </TabsTrigger>
                     <TabsTrigger value="password" :disabled="!props.originalImage">
-                        Original Image
+                        Original
                     </TabsTrigger>
                 </TabsList>
                 <TabsContent value="account" style="width: 100%; height: 100%;">
                     <canvas ref="canvasRef"></canvas>
+                </TabsContent>
+                <TabsContent value="adjusted">
+                    <img :src="props.adjustedImage?.src" alt="Adjusted Image" style="outline: 2px solid #666;" />
                 </TabsContent>
                 <TabsContent value="password">
                     <img :src="props.originalImage?.src" alt="Original Image" style="outline: 2px solid #666;" />
@@ -97,5 +104,11 @@ canvas {
     min-height: 100%;
     max-width: 100%;
     max-height: 100%;
+}
+
+img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 </style>
