@@ -14,7 +14,7 @@ function loadSettings(): GlobalSettings {
         if (raw) return JSON.parse(raw);
     } catch { }
     return {
-        pixelPerLine: 384,
+        pixelPerLine: 576,
         showAllBluetoothDevices: false,
     };
 }
