@@ -4,10 +4,15 @@ import { useThrottleFn } from '@vueuse/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
+import Button from '@/components/ui/button/Button.vue';
 import type { ImageConversionOptions } from '@/logic/printerimage';
 import Switch from './ui/switch/Switch.vue';
-import { Settings } from 'lucide-vue-next';
+import { Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import Label from './ui/label/Label.vue';
+
+const props = defineProps<{
+    initialOptions?: ImageConversionOptions;
+}>();
 
 const emit = defineEmits<{
     (e: 'image-conversion-options-change', value: ImageConversionOptions): void;
@@ -18,16 +23,33 @@ const throttledEmit = useThrottleFn(() => {
     emit('image-conversion-options-change', imageConversionOptions.value);
 }, 300);
 
+// Increment/decrement functions for fine-tuning
+function adjustContrast(delta: number) {
+    contrast.value = Math.max(0, Math.min(2, contrast.value + delta));
+    throttledEmit();
+}
+
+function adjustExposure(delta: number) {
+    exposure.value = Math.max(0, Math.min(2, exposure.value + delta));
+    throttledEmit();
+}
+
+function adjustThreshold(delta: number) {
+    threshold.value = Math.max(0, Math.min(255, threshold.value + delta));
+    throttledEmit();
+}
+
 
 const rotationOptions = [0, 90, 180, 270] as const;
 const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
 
-const threshold = ref(128);
-const rotation = ref<number | undefined>(0);
-const invert = ref(false);
-const algorithm = ref<'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'>('Basic');
-const contrast = ref(1.0);
-const exposure = ref(1.0);
+// Initialize with saved settings or defaults
+const threshold = ref(props.initialOptions?.threshold ?? 128);
+const rotation = ref<number | undefined>(props.initialOptions?.rotation ?? 0);
+const invert = ref(props.initialOptions?.invert ?? false);
+const algorithm = ref<'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'>(props.initialOptions?.algorithm ?? 'Basic');
+const contrast = ref(props.initialOptions?.contrast ?? 1.0);
+const exposure = ref(props.initialOptions?.exposure ?? 1.0);
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -58,7 +80,15 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <Label class="font-medium" for="contrast">Contrast</Label>
-                    <Badge variant="outline" class="text-xs font-semibold">{{ contrast.toFixed(2) }}</Badge>
+                    <div class="flex items-center gap-1">
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustContrast(-0.01)" title="Decrease contrast by 0.01">
+                            <ChevronLeft :size="14" />
+                        </Button>
+                        <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ contrast.toFixed(2) }}</Badge>
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustContrast(0.01)" title="Increase contrast by 0.01">
+                            <ChevronRight :size="14" />
+                        </Button>
+                    </div>
                 </div>
                 <input id="contrast" type="range" min="0" max="2" step="0.01" v-model.number="contrast" class="w-full"
                     @input="throttledEmit" />
@@ -66,7 +96,15 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <Label class="font-medium" for="exposure">Exposure</Label>
-                    <Badge variant="outline" class="text-xs font-semibold">{{ exposure.toFixed(2) }}</Badge>
+                    <div class="flex items-center gap-1">
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustExposure(-0.01)" title="Decrease exposure by 0.01">
+                            <ChevronLeft :size="14" />
+                        </Button>
+                        <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ exposure.toFixed(2) }}</Badge>
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustExposure(0.01)" title="Increase exposure by 0.01">
+                            <ChevronRight :size="14" />
+                        </Button>
+                    </div>
                 </div>
                 <input id="exposure" type="range" min="0" max="2" step="0.01" v-model.number="exposure" class="w-full"
                     @input="throttledEmit" />
@@ -74,7 +112,15 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <Label class="font-medium" for="threshold">Threshold</Label>
-                    <Badge variant="outline" class="text-xs font-semibold">{{ threshold }}</Badge>
+                    <div class="flex items-center gap-1">
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustThreshold(-1)" title="Decrease threshold by 1">
+                            <ChevronLeft :size="14" />
+                        </Button>
+                        <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ threshold }}</Badge>
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustThreshold(1)" title="Increase threshold by 1">
+                            <ChevronRight :size="14" />
+                        </Button>
+                    </div>
                 </div>
                 <input id="threshold" type="range" min="0" max="255" v-model.number="threshold" class="w-full"
                     @input="throttledEmit" />

@@ -13,7 +13,7 @@ import { Printer, RotateCcw } from 'lucide-vue-next';
 import { Toaster } from '@/components/ui/sonner'
 import Button from './components/ui/button/Button.vue';
 
-import { defaultImageConversionOptions, type PrinterImage } from './logic/printerimage.ts';
+import { defaultImageConversionOptions, type ImageConversionOptions, type PrinterImage } from './logic/printerimage.ts';
 import { useImageConvertersStore } from './stores/imageconverter.ts';
 import { useGlobalSettingsStore } from './stores/globalsettings.ts';
 import { usePrinterStore } from './stores/printer.ts';
@@ -26,10 +26,42 @@ const converterStore = useImageConvertersStore();
 const appSettings = useGlobalSettingsStore();
 const printerStore = usePrinterStore();
 
+// Load saved settings from localStorage or use defaults
+function loadSavedSettings(): ImageConversionOptions {
+    try {
+        const saved = localStorage.getItem('imageConversionOptions');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Validate the loaded settings have all required fields
+            if (parsed && typeof parsed === 'object') {
+                return {
+                    rotation: parsed.rotation ?? defaultImageConversionOptions.rotation,
+                    threshold: parsed.threshold ?? defaultImageConversionOptions.threshold,
+                    invert: parsed.invert ?? defaultImageConversionOptions.invert,
+                    algorithm: parsed.algorithm ?? defaultImageConversionOptions.algorithm,
+                    contrast: parsed.contrast ?? defaultImageConversionOptions.contrast,
+                    exposure: parsed.exposure ?? defaultImageConversionOptions.exposure,
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to load saved settings:', e);
+    }
+    return { ...defaultImageConversionOptions };
+}
 
-const imageConversionOptions = ref(defaultImageConversionOptions);
+const imageConversionOptions = ref(loadSavedSettings());
 const imageRef = ref<HTMLImageElement | null>(null);
 const componentKey = ref(0);
+
+// Save settings to localStorage whenever they change
+watch(imageConversionOptions, (newOptions) => {
+    try {
+        localStorage.setItem('imageConversionOptions', JSON.stringify(newOptions));
+    } catch (e) {
+        console.warn('Failed to save settings:', e);
+    }
+}, { deep: true });
 
 async function setImage(image: HTMLImageElement) {
     imageRef.value = image;
@@ -62,6 +94,12 @@ async function printImage() {
 
 function restartApp() {
     imageConversionOptions.value = { ...defaultImageConversionOptions };
+    // Clear saved settings from localStorage
+    try {
+        localStorage.removeItem('imageConversionOptions');
+    } catch (e) {
+        console.warn('Failed to clear saved settings:', e);
+    }
     componentKey.value += 1; // Force re-mount of ImageConversionCard to reset UI controls
 }
 
@@ -87,7 +125,7 @@ function restartApp() {
         <div class="settings-panel">
             <PrinterConnectionCard :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices" />
             <ImageDragAndDrop @imageLoaded="(image) => setImage(image)" />
-            <ImageConversionCard :key="componentKey" @image-conversion-options-change="(options) => imageConversionOptions = options" />
+            <ImageConversionCard :key="componentKey" :initial-options="imageConversionOptions" @image-conversion-options-change="(options) => imageConversionOptions = options" />
         </div>
         <div class="preview-panel">
             <ImagePreview :image="imageDataRef" :original-image="imageRef" :adjusted-image="null" style="width: 100%;" />
