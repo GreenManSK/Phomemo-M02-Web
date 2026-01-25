@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PrinterImage } from '@/logic/printerimage';
-import { defineProps, ref, watch } from 'vue';
+import { computed, defineProps, ref, watch } from 'vue';
 import Card from './ui/card/Card.vue';
 import CardHeader from './ui/card/CardHeader.vue';
 import CardTitle from './ui/card/CardTitle.vue';
@@ -17,6 +17,11 @@ const props = defineProps<{
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+
+// Computed property for dynamic width based on image
+const tabsWidth = computed(() => {
+    return props.image ? `${props.image.width}px` : '400px';
+});
 
 // on prop change
 watch([canvasRef, props], async () => {
@@ -126,7 +131,7 @@ watch([canvasRef, props], async () => {
             <CardTitle>Image Preview</CardTitle>
         </CardHeader>
         <CardContent>
-            <Tabs default-value="account" class="w-[400px]">
+            <Tabs default-value="account" :style="{ width: tabsWidth }">
                 <TabsList>
                     <TabsTrigger value="account">
                         Preview
