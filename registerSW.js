@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Phomemo-M02-Web/serviceworker.js', { scope: '/Phomemo-M02-Web/' })})}
