@@ -39,19 +39,77 @@ watch([canvasRef, props], async () => {
     const data = imageData.data;
     const { width, height, bits } = props.image;
 
-    // Each bit in 'bits' is a pixel, row-major order
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const byteIndex = (y * width + x) >> 3;
-            const bitIndex = 7 - (x & 7);
-            const isBlack = ((bits[byteIndex] >> bitIndex) & 1) === 1;
-            const color = isBlack ? 0 : 255;
-            const pixelIndex = (y * width + x) * 4;
+    // Pre-fill alpha channel to 255 (opaque) - more efficient than setting per pixel
+    for (let i = 3; i < data.length; i += 4) {
+        data[i] = 255;
+    }
 
-            data[pixelIndex] = color;     // R
-            data[pixelIndex + 1] = color; // G
-            data[pixelIndex + 2] = color; // B
-            data[pixelIndex + 3] = 255;   // A
+    // Optimized: Process 8 pixels at a time (one byte)
+    const bytesPerRow = width >> 3; // width / 8
+    let pixelIndex = 0;
+
+    for (let y = 0; y < height; y++) {
+        const rowByteOffset = y * bytesPerRow;
+
+        for (let byteX = 0; byteX < bytesPerRow; byteX++) {
+            const byte = bits[rowByteOffset + byteX];
+
+            // Unroll the 8 bits in this byte for better performance
+            // Bit 7 (leftmost)
+            let color = ((byte >> 7) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 6
+            color = ((byte >> 6) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 5
+            color = ((byte >> 5) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 4
+            color = ((byte >> 4) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 3
+            color = ((byte >> 3) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 2
+            color = ((byte >> 2) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 1
+            color = ((byte >> 1) & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
+
+            // Bit 0 (rightmost)
+            color = (byte & 1) ? 0 : 255;
+            data[pixelIndex] = color;
+            data[pixelIndex + 1] = color;
+            data[pixelIndex + 2] = color;
+            pixelIndex += 4;
         }
     }
 

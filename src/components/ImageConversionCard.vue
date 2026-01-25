@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useThrottleFn } from '@vueuse/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,11 @@ import Label from './ui/label/Label.vue';
 const emit = defineEmits<{
     (e: 'image-conversion-options-change', value: ImageConversionOptions): void;
 }>();
+
+// Throttled emit function - allows updates every 100ms during dragging
+const throttledEmit = useThrottleFn(() => {
+    emit('image-conversion-options-change', imageConversionOptions.value);
+}, 300);
 
 
 const rotationOptions = [0, 90, 180, 270] as const;
@@ -55,7 +61,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     <Badge variant="outline" class="text-xs font-semibold">{{ contrast.toFixed(2) }}</Badge>
                 </div>
                 <input id="contrast" type="range" min="0" max="2" step="0.01" v-model.number="contrast" class="w-full"
-                    @input="emit('image-conversion-options-change', imageConversionOptions)" />
+                    @input="throttledEmit" />
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
@@ -63,7 +69,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     <Badge variant="outline" class="text-xs font-semibold">{{ exposure.toFixed(2) }}</Badge>
                 </div>
                 <input id="exposure" type="range" min="0" max="2" step="0.01" v-model.number="exposure" class="w-full"
-                    @input="emit('image-conversion-options-change', imageConversionOptions)" />
+                    @input="throttledEmit" />
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
@@ -71,7 +77,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     <Badge variant="outline" class="text-xs font-semibold">{{ threshold }}</Badge>
                 </div>
                 <input id="threshold" type="range" min="0" max="255" v-model.number="threshold" class="w-full"
-                    @input="emit('image-conversion-options-change', imageConversionOptions)" />
+                    @input="throttledEmit" />
             </div>
             <div class="mb-4">
                 <Label class="block mb-2 font-medium" for="rotation">Rotation</Label>
