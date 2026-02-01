@@ -74,6 +74,9 @@ function loadSavedSettings(): ImageConversionOptions {
                     resizeAlgorithm: resizeAlgorithm as 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4',
                     sharpenBeforeResize: parsed.sharpenBeforeResize ?? defaultImageConversionOptions.sharpenBeforeResize,
                     sharpenAfterResize: parsed.sharpenAfterResize ?? defaultImageConversionOptions.sharpenAfterResize,
+                    autoLevels: parsed.autoLevels ?? defaultImageConversionOptions.autoLevels,
+                    autoContrast: parsed.autoContrast ?? defaultImageConversionOptions.autoContrast,
+                    autoExposure: parsed.autoExposure ?? defaultImageConversionOptions.autoExposure,
                 };
             }
         }

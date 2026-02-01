@@ -104,6 +104,9 @@ const imageSmoothingQuality = ref<'low' | 'medium' | 'high'>(props.initialOption
 const resizeAlgorithm = ref<'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'>(props.initialOptions?.resizeAlgorithm ?? 'canvas');
 const sharpenBeforeResize = ref<'none' | 'light' | 'medium' | 'strong'>(props.initialOptions?.sharpenBeforeResize ?? 'none');
 const sharpenAfterResize = ref<'none' | 'light' | 'medium' | 'strong'>(props.initialOptions?.sharpenAfterResize ?? 'none');
+const autoLevels = ref(props.initialOptions?.autoLevels ?? false);
+const autoContrast = ref(props.initialOptions?.autoContrast ?? false);
+const autoExposure = ref(props.initialOptions?.autoExposure ?? false);
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -122,6 +125,9 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     resizeAlgorithm: resizeAlgorithm.value,
     sharpenBeforeResize: sharpenBeforeResize.value,
     sharpenAfterResize: sharpenAfterResize.value,
+    autoLevels: autoLevels.value,
+    autoContrast: autoContrast.value,
+    autoExposure: autoExposure.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -185,6 +191,37 @@ const heightInCm = computed(() => {
                         {{ option === 'before-resize' ? 'Before Resize' : 'After Resize' }}
                     </ToggleGroupItem>
                 </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <Label class="font-medium">Auto Adjustments</Label>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <Switch id="auto-levels" v-model="autoLevels" :disabled="props.isProcessing"
+                            @update:model-value="emit('image-conversion-options-change', imageConversionOptions)" />
+                        <Label for="auto-levels" class="cursor-pointer">
+                            Auto Levels
+                        </Label>
+                        <Loader2 v-if="props.isProcessing && autoLevels" :size="16" class="animate-spin text-blue-500" />
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <Switch id="auto-contrast" v-model="autoContrast" :disabled="props.isProcessing"
+                            @update:model-value="emit('image-conversion-options-change', imageConversionOptions)" />
+                        <Label for="auto-contrast" class="cursor-pointer">
+                            Auto Contrast
+                        </Label>
+                        <Loader2 v-if="props.isProcessing && autoContrast" :size="16" class="animate-spin text-blue-500" />
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <Switch id="auto-exposure" v-model="autoExposure" :disabled="props.isProcessing"
+                            @update:model-value="emit('image-conversion-options-change', imageConversionOptions)" />
+                        <Label for="auto-exposure" class="cursor-pointer">
+                            Auto Exposure
+                        </Label>
+                        <Loader2 v-if="props.isProcessing && autoExposure" :size="16" class="animate-spin text-blue-500" />
+                    </div>
+                </div>
             </div>
             <div class="mb-4">
                 <Label class="block mb-2 font-medium" for="paper-thickness">Paper Thickness</Label>

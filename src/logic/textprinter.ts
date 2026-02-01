@@ -237,6 +237,9 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             resizeAlgorithm: 'canvas',
             sharpenBeforeResize: 'none',
             sharpenAfterResize: 'none',
+            autoLevels: false,
+            autoContrast: false,
+            autoExposure: false,
         }
     );
 

@@ -1,5 +1,5 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
-import { applyFilter, applySharpen } from "./phomemofilters";
+import { applyFilter, applySharpen, applyAutoLevels, applyAutoContrast, applyAutoExposure } from "./phomemofilters";
 
 // @ts-ignore
 import cv from '@techstark/opencv-js';
@@ -127,21 +127,50 @@ async function resizeWithOpenCV(
     }
 }
 
-export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
-    // Apply preprocessing filter if specified AND filterOrder is 'before-resize' (or not specified for backwards compatibility)
+/**
+ * Internal implementation of convertImageToBits
+ * This is wrapped by the public function with error handling and retry logic
+ */
+async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
     let processedImage: ImageBitmap = image;
     let filteredImageData: ImageData | null = null;
 
+    // Apply preprocessing filter if specified AND filterOrder is 'before-resize' (or not specified for backwards compatibility)
     const shouldFilterBeforeResize = !options.filterOrder || options.filterOrder === 'before-resize';
 
     if (shouldFilterBeforeResize && options.preprocessFilter && options.preprocessFilter !== 'none') {
         console.log(`Applying ${options.preprocessFilter} filter before resize...`);
         const filterStartTime = performance.now();
-        filteredImageData = await applyFilter(image, options.preprocessFilter);
+        filteredImageData = await applyFilter(processedImage, options.preprocessFilter);
         console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
 
         // Convert filtered ImageData back to ImageBitmap
         processedImage = await createImageBitmap(filteredImageData);
+    }
+
+    // Apply auto adjustments after preprocessing filter (before resize)
+    if (options.autoLevels) {
+        console.log('Applying auto levels adjustment...');
+        const autoLevelsStartTime = performance.now();
+        const autoLevelsImageData = await applyAutoLevels(processedImage);
+        console.log(`Auto levels applied in ${performance.now() - autoLevelsStartTime}ms`);
+        processedImage = await createImageBitmap(autoLevelsImageData);
+    }
+
+    if (options.autoContrast) {
+        console.log('Applying auto contrast adjustment...');
+        const autoContrastStartTime = performance.now();
+        const autoContrastImageData = await applyAutoContrast(processedImage);
+        console.log(`Auto contrast applied in ${performance.now() - autoContrastStartTime}ms`);
+        processedImage = await createImageBitmap(autoContrastImageData);
+    }
+
+    if (options.autoExposure) {
+        console.log('Applying auto exposure adjustment...');
+        const autoExposureStartTime = performance.now();
+        const autoExposureImageData = await applyAutoExposure(processedImage);
+        console.log(`Auto exposure applied in ${performance.now() - autoExposureStartTime}ms`);
+        processedImage = await createImageBitmap(autoExposureImageData);
     }
 
     // Apply sharpening before resize if specified
@@ -249,13 +278,8 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             break;
     }
 
-    // Only apply contrast and exposure filters during draw if filter will be applied before resize
-    // (or if no filter is being applied). For 'after-resize', we'll apply contrast/exposure AFTER the filter.
-    const applyContrastExposureNow = options.filterOrder !== 'after-resize';
-
-    if (applyContrastExposureNow) {
-        ctx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
-    }
+    // Don't apply manual contrast/exposure during draw - will apply after auto adjustments
+    // ctx.filter is left at 'none'
 
     if (options.rotation !== 0) {
         ctx.save();
@@ -304,23 +328,64 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         filteredImageData = await applyFilter(resizedBitmap, options.preprocessFilter);
         console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
 
-        // Now apply contrast/exposure to the filtered image
-        const filteredCanvas = new OffscreenCanvas(canvas.width, outputHeight);
-        const filteredCtx = filteredCanvas.getContext('2d');
-        if (!filteredCtx) throw new Error('Failed to get filtered canvas context');
-
-        // Draw filtered image with contrast/exposure filters
-        filteredCtx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
-        const filteredBitmap = await createImageBitmap(filteredImageData);
-        filteredCtx.drawImage(filteredBitmap, 0, 0);
-        filteredCtx.filter = 'none';
-
-        // Use the filtered + contrast/exposure adjusted image for sampling and as adjusted image
-        sampledImage = filteredCtx.getImageData(0, 0, canvas.width, outputHeight);
-        adjustedImageData = sampledImage; // Update to show the final adjusted image (filter + contrast/exposure)
+        // Use the filtered image (manual contrast/exposure will be applied later)
+        sampledImage = filteredImageData;
+        adjustedImageData = filteredImageData;
     } else {
         // No filter or already filtered before resize (with contrast/exposure already applied)
         sampledImage = adjustedImageData;
+    }
+
+    // Apply auto adjustments after preprocessing filter (after resize if filterOrder is 'after-resize')
+    if (options.filterOrder === 'after-resize') {
+        if (options.autoLevels) {
+            console.log('Applying auto levels adjustment after filter...');
+            const autoLevelsStartTime = performance.now();
+            const autoLevelsBitmap = await createImageBitmap(sampledImage);
+            const autoLevelsImageData = await applyAutoLevels(autoLevelsBitmap);
+            console.log(`Auto levels applied in ${performance.now() - autoLevelsStartTime}ms`);
+            sampledImage = autoLevelsImageData;
+            adjustedImageData = autoLevelsImageData;
+        }
+
+        if (options.autoContrast) {
+            console.log('Applying auto contrast adjustment after filter...');
+            const autoContrastStartTime = performance.now();
+            const autoContrastBitmap = await createImageBitmap(sampledImage);
+            const autoContrastImageData = await applyAutoContrast(autoContrastBitmap);
+            console.log(`Auto contrast applied in ${performance.now() - autoContrastStartTime}ms`);
+            sampledImage = autoContrastImageData;
+            adjustedImageData = autoContrastImageData;
+        }
+
+        if (options.autoExposure) {
+            console.log('Applying auto exposure adjustment after filter...');
+            const autoExposureStartTime = performance.now();
+            const autoExposureBitmap = await createImageBitmap(sampledImage);
+            const autoExposureImageData = await applyAutoExposure(autoExposureBitmap);
+            console.log(`Auto exposure applied in ${performance.now() - autoExposureStartTime}ms`);
+            sampledImage = autoExposureImageData;
+            adjustedImageData = autoExposureImageData;
+        }
+    }
+
+    // Apply manual contrast and exposure adjustments AFTER all preprocessing and auto adjustments
+    // Note: adjustedContrast/adjustedExposure include paper thickness adjustments
+    if (options.contrast !== 1.0 || options.exposure !== 1.0 || adjustedContrast !== 1.0 || adjustedExposure !== 1.0) {
+        console.log(`Applying manual adjustments: contrast=${options.contrast} (adjusted: ${adjustedContrast}), exposure=${options.exposure} (adjusted: ${adjustedExposure})`);
+        const manualAdjustCanvas = new OffscreenCanvas(canvas.width, outputHeight);
+        const manualAdjustCtx = manualAdjustCanvas.getContext('2d');
+        if (!manualAdjustCtx) throw new Error('Failed to get manual adjust canvas context');
+
+        // Apply manual contrast/exposure using CSS filters (includes paper thickness adjustments)
+        manualAdjustCtx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
+        const preAdjustBitmap = await createImageBitmap(sampledImage);
+        manualAdjustCtx.drawImage(preAdjustBitmap, 0, 0);
+        manualAdjustCtx.filter = 'none';
+
+        // Update sampledImage with manually adjusted version
+        sampledImage = manualAdjustCtx.getImageData(0, 0, canvas.width, outputHeight);
+        adjustedImageData = sampledImage;
     }
 
     // Apply sharpening after resize if specified (before dithering)
@@ -595,6 +660,59 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         adjustedImageData,
         filteredImageData
     };
+}
+
+/**
+ * Public API: Convert image to bits with error handling and retry logic
+ * Catches OpenCV errors and retries from scratch if needed
+ */
+export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
+    const maxRetries = 1;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            if (attempt > 0) {
+                console.warn(`⚠️ Retry attempt ${attempt} after OpenCV error...`);
+                // Wait a bit before retry to let things settle
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Attempt conversion
+            const result = await convertImageToBitsInternal(image, outputWidthPixel, options);
+
+            if (attempt > 0) {
+                console.log('✅ Retry successful!');
+            }
+
+            return result;
+        } catch (error) {
+            lastError = error;
+            const errorMessage = typeof error === 'number' ? `OpenCV Error ${error}` : String(error);
+            console.error(`❌ Image conversion failed (attempt ${attempt + 1}/${maxRetries + 1}):`, errorMessage);
+
+            if (attempt < maxRetries) {
+                // Try to clean up OpenCV state
+                try {
+                    console.log('🧹 Attempting cleanup before retry...');
+                    // Force garbage collection if available (dev tools)
+                    if (typeof (globalThis as any).gc === 'function') {
+                        (globalThis as any).gc();
+                    }
+                } catch (cleanupError) {
+                    console.warn('Cleanup failed:', cleanupError);
+                }
+            }
+        }
+    }
+
+    // All retries failed
+    const errorMessage = typeof lastError === 'number'
+        ? `OpenCV Error ${lastError}. Try refreshing the page or using a simpler image.`
+        : `Conversion failed: ${lastError}`;
+
+    console.error('💥 All retry attempts failed. Last error:', lastError);
+    throw new Error(errorMessage);
 }
 
 

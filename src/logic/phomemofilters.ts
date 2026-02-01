@@ -316,6 +316,287 @@ function draftFilter(src: any): any {
 }
 
 /**
+ * Apply Auto Levels adjustment to an ImageBitmap
+ * Can be used independently of preprocessing filters
+ */
+export async function applyAutoLevels(image: ImageBitmap): Promise<ImageData> {
+    await ensureOpenCVReady();
+
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, image.width, image.height);
+
+    const src = cv.matFromImageData(imageData);
+    let result: any;
+
+    try {
+        result = autoLevelsFilter(src);
+        const outputImageData = new ImageData(
+            new Uint8ClampedArray(result.data),
+            result.cols,
+            result.rows
+        );
+        return outputImageData;
+    } finally {
+        src.delete();
+        if (result) result.delete();
+    }
+}
+
+/**
+ * Apply Auto Contrast adjustment to an ImageBitmap
+ * Can be used independently of preprocessing filters
+ */
+export async function applyAutoContrast(image: ImageBitmap): Promise<ImageData> {
+    await ensureOpenCVReady();
+
+    console.log(`[applyAutoContrast] Input image: ${image.width}x${image.height}`);
+
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, image.width, image.height);
+
+    console.log(`[applyAutoContrast] ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`);
+
+    const src = cv.matFromImageData(imageData);
+    let result: any;
+
+    try {
+        result = autoContrastFilter(src);
+        console.log(`[applyAutoContrast] Result mat: ${result.cols}x${result.rows}, channels: ${result.channels()}, type: ${result.type()}`);
+
+        const outputImageData = new ImageData(
+            new Uint8ClampedArray(result.data),
+            result.cols,
+            result.rows
+        );
+        console.log(`[applyAutoContrast] Output ImageData: ${outputImageData.width}x${outputImageData.height}, data length: ${outputImageData.data.length}`);
+        return outputImageData;
+    } finally {
+        src.delete();
+        if (result) result.delete();
+    }
+}
+
+/**
+ * Apply Auto Exposure adjustment to an ImageBitmap
+ * Can be used independently of preprocessing filters
+ */
+export async function applyAutoExposure(image: ImageBitmap): Promise<ImageData> {
+    await ensureOpenCVReady();
+
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, image.width, image.height);
+
+    const src = cv.matFromImageData(imageData);
+    let result: any;
+
+    try {
+        result = autoExposureFilter(src);
+        const outputImageData = new ImageData(
+            new Uint8ClampedArray(result.data),
+            result.cols,
+            result.rows
+        );
+        return outputImageData;
+    } finally {
+        src.delete();
+        if (result) result.delete();
+    }
+}
+
+/**
+ * Auto Levels Filter (Internal)
+ * Automatically adjusts black and white points using histogram analysis
+ * Works per channel for best color balance
+ */
+function autoLevelsFilter(src: any): any {
+    console.log('Applying Auto Levels filter...');
+
+    // Convert to RGB for processing
+    let rgb = new cv.Mat();
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
+
+    // Split into channels
+    let channels = new cv.MatVector();
+    cv.split(rgb, channels);
+
+    // Process each channel
+    for (let i = 0; i < 3; i++) {
+        const channel = channels.get(i);
+
+        // Calculate histogram
+        let hist = new cv.Mat();
+        let mask = new cv.Mat();
+        let srcVec = new cv.MatVector();
+        srcVec.push_back(channel);
+        cv.calcHist(
+            srcVec,
+            [0],
+            mask,
+            hist,
+            [256],
+            [0, 256]
+        );
+        srcVec.delete();
+
+        // Find min and max with 1% cutoff (ignore extreme outliers)
+        const totalPixels = channel.rows * channel.cols;
+        const cutoffPixels = totalPixels * 0.01; // 1% cutoff
+
+        let minVal = 0;
+        let maxVal = 255;
+        let cumSum = 0;
+
+        // Find minimum (1st percentile)
+        for (let j = 0; j < 256; j++) {
+            cumSum += hist.data32F[j];
+            if (cumSum > cutoffPixels) {
+                minVal = j;
+                break;
+            }
+        }
+
+        // Find maximum (99th percentile)
+        cumSum = 0;
+        for (let j = 255; j >= 0; j--) {
+            cumSum += hist.data32F[j];
+            if (cumSum > cutoffPixels) {
+                maxVal = j;
+                break;
+            }
+        }
+
+        // Normalize channel using found min/max
+        if (maxVal > minVal) {
+            const alpha = 255.0 / (maxVal - minVal);
+            const beta = -minVal * alpha;
+            cv.convertScaleAbs(channel, channel, alpha, beta);
+        }
+
+        hist.delete();
+        mask.delete();
+    }
+
+    // Merge channels back
+    let result = new cv.Mat();
+    cv.merge(channels, result);
+
+    // Convert back to RGBA
+    let rgba = new cv.Mat();
+    cv.cvtColor(result, rgba, cv.COLOR_RGB2RGBA);
+
+    rgb.delete();
+    result.delete();
+    channels.delete();
+
+    return rgba;
+}
+
+/**
+ * Auto Contrast Filter
+ * Simple histogram stretching to use full 0-255 range
+ */
+function autoContrastFilter(src: any): any {
+    console.log('Applying Auto Contrast filter...');
+
+    // Convert to RGB for processing
+    let rgb = new cv.Mat();
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
+
+    // Split into channels
+    let channels = new cv.MatVector();
+    cv.split(rgb, channels);
+
+    // Find global min and max across all channels
+    let globalMin = 255;
+    let globalMax = 0;
+    let mask = new cv.Mat(); // Reusable mask for minMaxLoc
+
+    for (let i = 0; i < 3; i++) {
+        const channel = channels.get(i);
+        let minMax = cv.minMaxLoc(channel, mask);
+        if (minMax.minVal < globalMin) globalMin = minMax.minVal;
+        if (minMax.maxVal > globalMax) globalMax = minMax.maxVal;
+    }
+
+    mask.delete(); // Clean up mask
+
+    console.log(`Auto Contrast: Found min=${globalMin}, max=${globalMax}`);
+
+    // Apply stretch if there's any room for improvement
+    let stretched = new cv.Mat();
+
+    if (globalMax > globalMin) {
+        // Calculate stretch: map [min, max] to [0, 255]
+        const alpha = 255.0 / (globalMax - globalMin);
+        const beta = -globalMin * alpha;
+        cv.convertScaleAbs(rgb, stretched, alpha, beta);
+        console.log(`Auto Contrast: Applied stretch - alpha=${alpha.toFixed(3)}, beta=${beta.toFixed(3)}`);
+    } else {
+        // Flat image (all same value), return original
+        stretched = rgb.clone();
+        console.log('Auto Contrast: Skipped - flat image (no range)');
+    }
+
+    // Convert back to RGBA
+    let result = new cv.Mat();
+    cv.cvtColor(stretched, result, cv.COLOR_RGB2RGBA);
+
+    rgb.delete();
+    stretched.delete();
+    channels.delete();
+
+    return result;
+}
+
+/**
+ * Auto Exposure Filter
+ * Automatically adjusts brightness based on image histogram
+ * Targets mean brightness around 128 (middle gray)
+ */
+function autoExposureFilter(src: any): any {
+    console.log('Applying Auto Exposure filter...');
+
+    // Convert to grayscale to analyze brightness
+    let gray = new cv.Mat();
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+    // Calculate mean brightness
+    let mean = cv.mean(gray);
+    const currentBrightness = mean[0]; // 0-255
+    const targetBrightness = 128; // Middle gray
+
+    // Calculate adjustment needed
+    const adjustment = targetBrightness - currentBrightness;
+
+    // Convert to RGB for adjustment
+    let rgb = new cv.Mat();
+    cv.cvtColor(src, rgb, cv.COLOR_RGBA2RGB);
+
+    // Apply brightness adjustment
+    let adjusted = new cv.Mat();
+    cv.convertScaleAbs(rgb, adjusted, 1.0, adjustment);
+
+    // Convert back to RGBA
+    let result = new cv.Mat();
+    cv.cvtColor(adjusted, result, cv.COLOR_RGB2RGBA);
+
+    gray.delete();
+    rgb.delete();
+    adjusted.delete();
+
+    return result;
+}
+
+/**
  * Sharpen Filter
  * Applies unsharp masking with adjustable strength
  * Best applied after resize for thermal printing

@@ -21,6 +21,9 @@ export type ImageConversionOptions = {
     resizeAlgorithm: 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'; // resize interpolation algorithm
     sharpenBeforeResize: 'none' | 'light' | 'medium' | 'strong'; // sharpening applied before resize (preserves detail during downscaling)
     sharpenAfterResize: 'none' | 'light' | 'medium' | 'strong'; // sharpening applied after resize (compensates for resize blur, recommended for thermal printing)
+    autoLevels: boolean; // automatically adjust black and white points per channel (histogram-based)
+    autoContrast: boolean; // automatically stretch histogram to full range (simple normalization)
+    autoExposure: boolean; // automatically adjust brightness to optimal level (targets middle gray)
     // flip: boolean; // if true, the image is flipped horizontally
     // scale: number; // scale the image, 1 is no scaling, 2 is double size, etc.
     // crop: {
@@ -48,4 +51,7 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     resizeAlgorithm: 'canvas',
     sharpenBeforeResize: 'none',
     sharpenAfterResize: 'none',
+    autoLevels: false,
+    autoContrast: false,
+    autoExposure: false,
 };
