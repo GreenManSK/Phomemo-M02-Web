@@ -22,6 +22,7 @@ import { useGlobalSettingsStore } from './stores/globalsettings.ts';
 import { usePrinterStore } from './stores/printer.ts';
 import { useTextDocumentStore } from './stores/textdocument.ts';
 import { renderTextDocument, type TextDocument, type TextConversionOptions, defaultTextConversionOptions } from './logic/textprinter.ts';
+import { applyFilter } from './logic/phomemofilters.ts';
 
 
 
@@ -96,6 +97,11 @@ const imageRef = ref<HTMLImageElement | null>(null);
 const componentKey = ref(0);
 const isProcessingImage = ref(false);
 
+// Cache for preprocessed images
+const lastPreprocessFilter = ref<string | null>(null);
+const lastSourceImage = ref<HTMLImageElement | null>(null);
+const cachedFilteredImage = ref<ImageBitmap | null>(null);
+
 // Save settings to localStorage whenever they change (except preprocessFilter)
 watch(imageConversionOptions, (newOptions) => {
     try {
@@ -158,9 +164,50 @@ watch([imageRef, imageConversionOptions], async () => {
     try {
         isProcessingImage.value = true;
 
-        // Convert to printer image (filters applied in worker)
-        const image = await createImageBitmap(imageRef.value);
-        const result = await converterStore.convertImage(image, appSettings.settings.pixelPerLine, options);
+        // Check if we need to re-run the preprocessing filter
+        const filterChanged = lastPreprocessFilter.value !== options.preprocessFilter;
+        const imageChanged = lastSourceImage.value !== imageRef.value;
+
+        let imageToConvert: ImageBitmap;
+        let filteredImageDataResult: ImageData | null = null;
+
+        if ((filterChanged || imageChanged) && options.preprocessFilter && options.preprocessFilter !== 'none') {
+            // Need to apply/re-apply the preprocessing filter
+            console.log(`Applying ${options.preprocessFilter} filter (filterChanged: ${filterChanged}, imageChanged: ${imageChanged})...`);
+            const filterStartTime = performance.now();
+
+            const sourceImage = await createImageBitmap(imageRef.value);
+            const filteredImageData = await applyFilter(sourceImage, options.preprocessFilter);
+            console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
+
+            // Cache the filtered image
+            cachedFilteredImage.value = await createImageBitmap(filteredImageData);
+            lastPreprocessFilter.value = options.preprocessFilter;
+            lastSourceImage.value = imageRef.value;
+
+            imageToConvert = cachedFilteredImage.value;
+            filteredImageDataResult = filteredImageData;
+        } else if (options.preprocessFilter && options.preprocessFilter !== 'none' && cachedFilteredImage.value && !imageChanged) {
+            // Reuse cached filtered image (only if image hasn't changed)
+            console.log(`Reusing cached ${options.preprocessFilter} filter`);
+            imageToConvert = cachedFilteredImage.value;
+            // We don't have the ImageData from cache, but we don't need it for display
+        } else {
+            // No filter or filter is 'none', or cache is invalid
+            if (filterChanged || imageChanged) {
+                lastSourceImage.value = imageRef.value;
+                lastPreprocessFilter.value = options.preprocessFilter;
+            }
+            // Clear cache when filter is set to 'none' or image changes without filter
+            if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
+                cachedFilteredImage.value = null;
+            }
+            imageToConvert = await createImageBitmap(imageRef.value);
+        }
+
+        // Convert to printer image with filter set to 'none' since we've already applied it
+        const conversionOptions = { ...options, preprocessFilter: 'none' };
+        const result = await converterStore.convertImage(imageToConvert, appSettings.settings.pixelPerLine, conversionOptions);
         imageDataRef.value = result.printerImage;
 
         // Convert adjusted ImageData to HTMLImageElement
@@ -170,12 +217,13 @@ watch([imageRef, imageConversionOptions], async () => {
             adjustedImageRef.value = null;
         }
 
-        // Convert filtered ImageData to HTMLImageElement
-        if (result.filteredImageData) {
-            filteredImageRef.value = await imageDataToImage(result.filteredImageData);
-        } else {
+        // Use the filtered image data if we just created it, otherwise use existing filteredImageRef
+        if (filteredImageDataResult) {
+            filteredImageRef.value = await imageDataToImage(filteredImageDataResult);
+        } else if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
             filteredImageRef.value = null;
         }
+        // Otherwise keep the existing filteredImageRef.value
     } catch (error) {
         console.error('Image conversion failed:', error);
     } finally {
