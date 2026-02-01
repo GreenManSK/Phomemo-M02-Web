@@ -135,20 +135,16 @@ async function imageDataToImage(imageData: ImageData): Promise<HTMLImageElement>
     ctx.putImageData(imageData, 0, 0);
 
     return new Promise((resolve, reject) => {
-        canvas.toBlob((blob) => {
-            if (!blob) {
-                reject(new Error('Failed to create blob'));
-                return;
-            }
-            const url = URL.createObjectURL(blob);
+        try {
+            // Use toDataURL for better cross-browser compatibility
+            const dataUrl = canvas.toDataURL('image/png');
             const img = new Image();
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                resolve(img);
-            };
-            img.onerror = reject;
-            img.src = url;
-        });
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Failed to load image from data URL'));
+            img.src = dataUrl;
+        } catch (error) {
+            reject(new Error(`Failed to convert canvas to data URL: ${error}`));
+        }
     });
 }
 
@@ -212,14 +208,24 @@ watch([imageRef, imageConversionOptions], async () => {
 
         // Convert adjusted ImageData to HTMLImageElement
         if (result.adjustedImageData) {
-            adjustedImageRef.value = await imageDataToImage(result.adjustedImageData);
+            try {
+                adjustedImageRef.value = await imageDataToImage(result.adjustedImageData);
+            } catch (error) {
+                console.error('Failed to create adjusted image:', error);
+                adjustedImageRef.value = null;
+            }
         } else {
             adjustedImageRef.value = null;
         }
 
         // Use the filtered image data if we just created it, otherwise use existing filteredImageRef
         if (filteredImageDataResult) {
-            filteredImageRef.value = await imageDataToImage(filteredImageDataResult);
+            try {
+                filteredImageRef.value = await imageDataToImage(filteredImageDataResult);
+            } catch (error) {
+                console.error('Failed to create filtered image:', error);
+                filteredImageRef.value = null;
+            }
         } else if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
             filteredImageRef.value = null;
         }
