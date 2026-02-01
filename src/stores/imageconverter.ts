@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { convertImageWorker } from '@/worker/client';
 import type { ImageConversionOptions, PrinterImage } from '@/logic/printerimage';
+import type { ImageConversionResult } from '@/logic/imagehelper';
 
 
 
@@ -10,10 +11,10 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
     const convertImageWorkerFn = convertImageWorker();
 
     let lastConversionTime = 0;
-    let pendingConversion: { image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions, resolve: (value: PrinterImage) => void, reject: (reason?: any) => void } | null = null;
+    let pendingConversion: { image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions, resolve: (value: ImageConversionResult) => void, reject: (reason?: any) => void } | null = null;
     let throttleTimeout: number | null = null;
 
-    async function convertImageInternal(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<PrinterImage> {
+    async function convertImageInternal(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
         abortController.value?.abort()
         const localController = new AbortController();
         abortController.value = localController;
@@ -25,14 +26,14 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
         }
         const endTime = performance.now();
         console.log(`Image conversion took ${endTime - startTime} ms`);
-        if (result.width !== outputWidthPixel) {
-            console.warn(`Image conversion width mismatch: expected ${outputWidthPixel}, got ${result.width}`);
+        if (result.printerImage.width !== outputWidthPixel) {
+            console.warn(`Image conversion width mismatch: expected ${outputWidthPixel}, got ${result.printerImage.width}`);
         }
         lastConversionTime = endTime;
         return result;
     }
 
-    function convertImage(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<PrinterImage> {
+    function convertImage(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
         const now = performance.now();
         const timeSinceLastConversion = now - lastConversionTime;
         const minInterval = 100; // Minimum 100ms between conversions

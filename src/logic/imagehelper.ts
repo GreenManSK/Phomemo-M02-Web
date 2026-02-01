@@ -1,6 +1,11 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
 
-export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<PrinterImage> {
+export type ImageConversionResult = {
+    printerImage: PrinterImage;
+    adjustedImageData: ImageData | null;
+};
+
+export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
     // Calculate width percentage (how much of paper width the image takes)
     const widthPercentage = Math.max(1, Math.min(100, options.widthPercentage ?? 100));
     const actualImageWidth = Math.round(outputWidthPixel * (widthPercentage / 100));
@@ -48,6 +53,9 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
 
     // Reset filter
     ctx.filter = 'none';
+
+    // Capture the adjusted image data (with contrast/exposure applied) before threshold conversion
+    const adjustedImageData = ctx.getImageData(0, 0, canvas.width, outputHeight);
 
     // Only sample the top portion based on heightPercentage
     const sampledImage = ctx.getImageData(0, 0, canvas.width, outputHeight);
@@ -299,9 +307,12 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
 
     console.log(`Image converted to bits: ${outputWidthPixel} pixels wide, ${outputHeight} pixels high`);
     return {
-        width: outputWidthPixel,
-        height: outputHeight,
-        bits: bits
+        printerImage: {
+            width: outputWidthPixel,
+            height: outputHeight,
+            bits: bits
+        },
+        adjustedImageData
     };
 }
 

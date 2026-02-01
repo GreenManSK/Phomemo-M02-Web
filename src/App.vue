@@ -26,6 +26,7 @@ import { renderTextDocument, type TextDocument, type TextConversionOptions, defa
 
 
 const imageDataRef = ref<PrinterImage | null>(null);
+const adjustedImageRef = ref<HTMLImageElement | null>(null);
 const textPreviewImage = ref<PrinterImage | null>(null);
 const activeTab = ref<'image' | 'text'>('image');
 
@@ -110,6 +111,33 @@ async function setImage(image: HTMLImageElement) {
     imageRef.value = image;
 }
 
+// Helper function to convert ImageData to HTMLImageElement
+async function imageDataToImage(imageData: ImageData): Promise<HTMLImageElement> {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    ctx.putImageData(imageData, 0, 0);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                reject(new Error('Failed to create blob'));
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    });
+}
+
 function onCurrentTextChange(text: string, style: import('./logic/textprinter').TextBlockStyle) {
     currentText.value = text;
     currentStyle.value = style;
@@ -123,8 +151,16 @@ watch([imageRef, imageConversionOptions], async () => {
         // Convert to printer image (filters applied in worker)
         const image = await createImageBitmap(imageRef.value);
         const result = await converterStore.convertImage(image, appSettings.settings.pixelPerLine, options);
-        imageDataRef.value = result;
-    } catch {
+        imageDataRef.value = result.printerImage;
+
+        // Convert adjusted ImageData to HTMLImageElement
+        if (result.adjustedImageData) {
+            adjustedImageRef.value = await imageDataToImage(result.adjustedImageData);
+        } else {
+            adjustedImageRef.value = null;
+        }
+    } catch (error) {
+        console.error('Image conversion failed:', error);
     }
 });
 
@@ -244,7 +280,7 @@ function restartApp() {
             <ImagePreview
                 :image="activeTab === 'image' ? imageDataRef : textPreviewImage"
                 :original-image="activeTab === 'image' ? imageRef : null"
-                :adjusted-image="null"
+                :adjusted-image="activeTab === 'image' ? adjustedImageRef : null"
                 style="width: 100%;"
             />
             <PrintButton

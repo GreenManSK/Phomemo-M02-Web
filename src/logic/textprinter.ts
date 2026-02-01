@@ -213,7 +213,7 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
     const imageBitmap = await createImageBitmap(canvas);
 
     // Convert to PrinterImage using existing conversion logic
-    const printerImage = await convertImageToBits(
+    const result = await convertImageToBits(
         imageBitmap,
         paperWidth,
         {
@@ -228,5 +228,5 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
         }
     );
 
-    return printerImage;
+    return result.printerImage;
 }
