@@ -71,6 +71,7 @@ const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] 
 const paperThicknessOptions = ['none', 'light', 'medium', 'heavy', 'dedicated'] as const;
 const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] as const;
 const filterOrderOptions = ['before-resize', 'after-resize'] as const;
+const imageSmoothingQualityOptions = ['low', 'medium', 'high'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
@@ -84,6 +85,8 @@ const widthPercentage = ref(props.initialOptions?.widthPercentage ?? 100);
 const paperThickness = ref<'none' | 'light' | 'medium' | 'heavy' | 'dedicated'>(props.initialOptions?.paperThickness ?? 'none');
 const preprocessFilter = ref<'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'>(props.initialOptions?.preprocessFilter ?? 'none');
 const filterOrder = ref<'before-resize' | 'after-resize'>(props.initialOptions?.filterOrder ?? 'before-resize');
+const imageSmoothingEnabled = ref(props.initialOptions?.imageSmoothingEnabled ?? true);
+const imageSmoothingQuality = ref<'low' | 'medium' | 'high'>(props.initialOptions?.imageSmoothingQuality ?? 'high');
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -97,6 +100,8 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     paperThickness: paperThickness.value,
     preprocessFilter: preprocessFilter.value,
     filterOrder: filterOrder.value,
+    imageSmoothingEnabled: imageSmoothingEnabled.value,
+    imageSmoothingQuality: imageSmoothingQuality.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -178,6 +183,25 @@ const heightInCm = computed(() => {
                         {{ option }}
                     </ToggleGroupItem>
                 </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <Label class="block mb-2 font-medium" for="image-smoothing">Image Smoothing</Label>
+                <div class="flex items-center space-x-2 mb-2">
+                    <Switch id="image-smoothing" v-model="imageSmoothingEnabled"
+                        @update:model-value="emit('image-conversion-options-change', imageConversionOptions)" />
+                    <Label for="image-smoothing">
+                        Enable Image Smoothing
+                    </Label>
+                </div>
+                <div v-if="imageSmoothingEnabled">
+                    <Label class="block mb-2 text-sm text-muted-foreground" for="smoothing-quality">Smoothing Quality</Label>
+                    <ToggleGroup type="single" v-model="imageSmoothingQuality" id="smoothing-quality">
+                        <ToggleGroupItem v-for="option in imageSmoothingQualityOptions" :key="option" :value="option"
+                            @click="emit('image-conversion-options-change', imageConversionOptions)">
+                            {{ option.charAt(0).toUpperCase() + option.slice(1) }}
+                        </ToggleGroupItem>
+                    </ToggleGroup>
+                </div>
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">

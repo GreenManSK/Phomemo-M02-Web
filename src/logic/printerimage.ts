@@ -16,6 +16,8 @@ export type ImageConversionOptions = {
     paperThickness: 'none' | 'light' | 'medium' | 'heavy' | 'dedicated'; // paper thickness / heat intensity setting
     preprocessFilter: 'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'; // preprocessing filter to apply before conversion
     filterOrder: 'before-resize' | 'after-resize'; // when to apply the preprocessing filter
+    imageSmoothingEnabled: boolean; // if true, applies interpolation when resizing (default: true)
+    imageSmoothingQuality: 'low' | 'medium' | 'high'; // quality of image smoothing interpolation
     // flip: boolean; // if true, the image is flipped horizontally
     // scale: number; // scale the image, 1 is no scaling, 2 is double size, etc.
     // crop: {
@@ -38,4 +40,6 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     paperThickness: 'none',
     preprocessFilter: 'none',
     filterOrder: 'before-resize',
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high',
 };

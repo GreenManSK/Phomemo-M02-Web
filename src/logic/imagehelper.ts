@@ -42,6 +42,10 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get canvas context');
 
+    // Configure image smoothing
+    ctx.imageSmoothingEnabled = options.imageSmoothingEnabled;
+    ctx.imageSmoothingQuality = options.imageSmoothingQuality;
+
     // Fill with white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
