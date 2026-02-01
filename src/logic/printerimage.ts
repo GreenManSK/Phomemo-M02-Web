@@ -27,7 +27,7 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     rotation: 0,
     threshold: 128,
     invert: false,
-    algorithm: 'Basic',
+    algorithm: 'Bayer',
     contrast: 1.0,
     exposure: 1.0,
     heightPercentage: 100,
