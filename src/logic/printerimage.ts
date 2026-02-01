@@ -15,6 +15,7 @@ export type ImageConversionOptions = {
     widthPercentage: number; // 0-100, percentage of paper width the image takes (centered, white on sides)
     paperThickness: 'none' | 'light' | 'medium' | 'heavy' | 'dedicated'; // paper thickness / heat intensity setting
     preprocessFilter: 'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'; // preprocessing filter to apply before conversion
+    filterOrder: 'before-resize' | 'after-resize'; // when to apply the preprocessing filter
     // flip: boolean; // if true, the image is flipped horizontally
     // scale: number; // scale the image, 1 is no scaling, 2 is double size, etc.
     // crop: {
@@ -36,4 +37,5 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     widthPercentage: 100,
     paperThickness: 'none',
     preprocessFilter: 'none',
+    filterOrder: 'before-resize',
 };

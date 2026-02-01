@@ -60,6 +60,7 @@ function loadSavedSettings(): ImageConversionOptions {
                     widthPercentage: parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
                     paperThickness: parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
                     preprocessFilter: 'none', // Always start with no filter (not saved)
+                    filterOrder: parsed.filterOrder ?? defaultImageConversionOptions.filterOrder,
                 };
             }
         }
@@ -99,6 +100,7 @@ const isProcessingImage = ref(false);
 
 // Cache for preprocessed images
 const lastPreprocessFilter = ref<string | null>(null);
+const lastFilterOrder = ref<string | null>(null);
 const lastSourceImage = ref<HTMLImageElement | null>(null);
 const cachedFilteredImage = ref<ImageBitmap | null>(null);
 
@@ -162,14 +164,18 @@ watch([imageRef, imageConversionOptions], async () => {
 
         // Check if we need to re-run the preprocessing filter
         const filterChanged = lastPreprocessFilter.value !== options.preprocessFilter;
+        const filterOrderChanged = lastFilterOrder.value !== options.filterOrder;
         const imageChanged = lastSourceImage.value !== imageRef.value;
 
         let imageToConvert: ImageBitmap;
         let filteredImageDataResult: ImageData | null = null;
 
-        if ((filterChanged || imageChanged) && options.preprocessFilter && options.preprocessFilter !== 'none') {
-            // Need to apply/re-apply the preprocessing filter
-            console.log(`Applying ${options.preprocessFilter} filter (filterChanged: ${filterChanged}, imageChanged: ${imageChanged})...`);
+        // Only apply filter here if filterOrder is 'before-resize'
+        const shouldApplyFilterHere = options.filterOrder === 'before-resize' && options.preprocessFilter && options.preprocessFilter !== 'none';
+
+        if ((filterChanged || imageChanged || filterOrderChanged) && shouldApplyFilterHere) {
+            // Need to apply/re-apply the preprocessing filter before resize
+            console.log(`Applying ${options.preprocessFilter} filter before resize (filterChanged: ${filterChanged}, imageChanged: ${imageChanged})...`);
             const filterStartTime = performance.now();
 
             const sourceImage = await createImageBitmap(imageRef.value);
@@ -179,30 +185,36 @@ watch([imageRef, imageConversionOptions], async () => {
             // Cache the filtered image
             cachedFilteredImage.value = await createImageBitmap(filteredImageData);
             lastPreprocessFilter.value = options.preprocessFilter;
+            lastFilterOrder.value = options.filterOrder;
             lastSourceImage.value = imageRef.value;
 
             imageToConvert = cachedFilteredImage.value;
             filteredImageDataResult = filteredImageData;
-        } else if (options.preprocessFilter && options.preprocessFilter !== 'none' && cachedFilteredImage.value && !imageChanged) {
-            // Reuse cached filtered image (only if image hasn't changed)
+        } else if (shouldApplyFilterHere && cachedFilteredImage.value && !imageChanged && !filterOrderChanged) {
+            // Reuse cached filtered image (only if image and filter order haven't changed)
             console.log(`Reusing cached ${options.preprocessFilter} filter`);
             imageToConvert = cachedFilteredImage.value;
             // We don't have the ImageData from cache, but we don't need it for display
         } else {
-            // No filter or filter is 'none', or cache is invalid
-            if (filterChanged || imageChanged) {
+            // No filter or filter is 'none', or filterOrder is 'after-resize', or cache is invalid
+            if (filterChanged || imageChanged || filterOrderChanged) {
                 lastSourceImage.value = imageRef.value;
                 lastPreprocessFilter.value = options.preprocessFilter;
+                lastFilterOrder.value = options.filterOrder;
             }
-            // Clear cache when filter is set to 'none' or image changes without filter
-            if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
+            // Clear cache when filter is set to 'none' or when using 'after-resize' order
+            if (options.preprocessFilter === 'none' || !options.preprocessFilter || options.filterOrder === 'after-resize') {
                 cachedFilteredImage.value = null;
             }
             imageToConvert = await createImageBitmap(imageRef.value);
         }
 
-        // Convert to printer image with filter set to 'none' since we've already applied it
-        const conversionOptions = { ...options, preprocessFilter: 'none' };
+        // Convert to printer image
+        // If filterOrder is 'before-resize', set preprocessFilter to 'none' since we've already applied it
+        // If filterOrder is 'after-resize', keep preprocessFilter so it's applied after resize in imagehelper
+        const conversionOptions = options.filterOrder === 'before-resize'
+            ? { ...options, preprocessFilter: 'none' as const }
+            : options;
         const result = await converterStore.convertImage(imageToConvert, appSettings.settings.pixelPerLine, conversionOptions);
         imageDataRef.value = result.printerImage;
 
@@ -218,7 +230,8 @@ watch([imageRef, imageConversionOptions], async () => {
             adjustedImageRef.value = null;
         }
 
-        // Use the filtered image data if we just created it, otherwise use existing filteredImageRef
+        // Handle filtered image display
+        // If we created a filtered image in App.vue (before-resize), use it
         if (filteredImageDataResult) {
             try {
                 filteredImageRef.value = await imageDataToImage(filteredImageDataResult);
@@ -226,7 +239,18 @@ watch([imageRef, imageConversionOptions], async () => {
                 console.error('Failed to create filtered image:', error);
                 filteredImageRef.value = null;
             }
-        } else if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
+        }
+        // If filter was applied after resize in imagehelper, use the result from there
+        else if (options.filterOrder === 'after-resize' && result.filteredImageData) {
+            try {
+                filteredImageRef.value = await imageDataToImage(result.filteredImageData);
+            } catch (error) {
+                console.error('Failed to create filtered image:', error);
+                filteredImageRef.value = null;
+            }
+        }
+        // Clear filtered image if no filter is selected
+        else if (options.preprocessFilter === 'none' || !options.preprocessFilter) {
             filteredImageRef.value = null;
         }
         // Otherwise keep the existing filteredImageRef.value

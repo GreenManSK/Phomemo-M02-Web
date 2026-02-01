@@ -70,6 +70,7 @@ const rotationOptions = [0, 90, 180, 270] as const;
 const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
 const paperThicknessOptions = ['none', 'light', 'medium', 'heavy', 'dedicated'] as const;
 const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] as const;
+const filterOrderOptions = ['before-resize', 'after-resize'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
@@ -82,6 +83,7 @@ const heightPercentage = ref(props.initialOptions?.heightPercentage ?? 100);
 const widthPercentage = ref(props.initialOptions?.widthPercentage ?? 100);
 const paperThickness = ref<'none' | 'light' | 'medium' | 'heavy' | 'dedicated'>(props.initialOptions?.paperThickness ?? 'none');
 const preprocessFilter = ref<'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'>(props.initialOptions?.preprocessFilter ?? 'none');
+const filterOrder = ref<'before-resize' | 'after-resize'>(props.initialOptions?.filterOrder ?? 'before-resize');
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -94,6 +96,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     widthPercentage: widthPercentage.value,
     paperThickness: paperThickness.value,
     preprocessFilter: preprocessFilter.value,
+    filterOrder: filterOrder.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -146,6 +149,15 @@ const heightInCm = computed(() => {
                     <ToggleGroupItem v-for="option in filterOptions" :key="option" :value="option"
                         @click="emit('image-conversion-options-change', imageConversionOptions)">
                         {{ option === 'lineplus' ? 'Line+' : option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4" v-if="preprocessFilter !== 'none'">
+                <Label class="block mb-2 font-medium" for="filter-order">Filter Order</Label>
+                <ToggleGroup type="single" v-model="filterOrder" id="filter-order">
+                    <ToggleGroupItem v-for="option in filterOrderOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)">
+                        {{ option === 'before-resize' ? 'Before Resize' : 'After Resize' }}
                     </ToggleGroupItem>
                 </ToggleGroup>
             </div>

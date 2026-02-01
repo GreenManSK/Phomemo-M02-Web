@@ -8,12 +8,14 @@ export type ImageConversionResult = {
 };
 
 export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
-    // Apply preprocessing filter if specified
+    // Apply preprocessing filter if specified AND filterOrder is 'before-resize' (or not specified for backwards compatibility)
     let processedImage: ImageBitmap = image;
     let filteredImageData: ImageData | null = null;
 
-    if (options.preprocessFilter && options.preprocessFilter !== 'none') {
-        console.log(`Applying ${options.preprocessFilter} filter...`);
+    const shouldFilterBeforeResize = !options.filterOrder || options.filterOrder === 'before-resize';
+
+    if (shouldFilterBeforeResize && options.preprocessFilter && options.preprocessFilter !== 'none') {
+        console.log(`Applying ${options.preprocessFilter} filter before resize...`);
         const filterStartTime = performance.now();
         filteredImageData = await applyFilter(image, options.preprocessFilter);
         console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
@@ -81,8 +83,13 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             break;
     }
 
-    // Apply contrast and exposure filters
-    ctx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
+    // Only apply contrast and exposure filters during draw if filter will be applied before resize
+    // (or if no filter is being applied). For 'after-resize', we'll apply contrast/exposure AFTER the filter.
+    const applyContrastExposureNow = options.filterOrder !== 'after-resize';
+
+    if (applyContrastExposureNow) {
+        ctx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
+    }
 
     if (options.rotation !== 0) {
         ctx.save();
@@ -101,11 +108,40 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     // Reset filter
     ctx.filter = 'none';
 
-    // Capture the adjusted image data (with contrast/exposure applied) before threshold conversion
-    const adjustedImageData = ctx.getImageData(0, 0, canvas.width, outputHeight);
+    // Capture the initial image data
+    let adjustedImageData = ctx.getImageData(0, 0, canvas.width, outputHeight);
 
-    // Only sample the top portion based on heightPercentage
-    const sampledImage = ctx.getImageData(0, 0, canvas.width, outputHeight);
+    // Apply preprocessing filter AFTER resize if filterOrder is 'after-resize'
+    let sampledImage: ImageData;
+    if (options.filterOrder === 'after-resize' && options.preprocessFilter && options.preprocessFilter !== 'none') {
+        console.log(`Applying ${options.preprocessFilter} filter after resize...`);
+        const filterStartTime = performance.now();
+
+        // Create a bitmap from the resized canvas (without contrast/exposure)
+        const resizedBitmap = await createImageBitmap(adjustedImageData);
+
+        // Apply the filter
+        filteredImageData = await applyFilter(resizedBitmap, options.preprocessFilter);
+        console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
+
+        // Now apply contrast/exposure to the filtered image
+        const filteredCanvas = new OffscreenCanvas(canvas.width, outputHeight);
+        const filteredCtx = filteredCanvas.getContext('2d');
+        if (!filteredCtx) throw new Error('Failed to get filtered canvas context');
+
+        // Draw filtered image with contrast/exposure filters
+        filteredCtx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
+        const filteredBitmap = await createImageBitmap(filteredImageData);
+        filteredCtx.drawImage(filteredBitmap, 0, 0);
+        filteredCtx.filter = 'none';
+
+        // Use the filtered + contrast/exposure adjusted image for sampling and as adjusted image
+        sampledImage = filteredCtx.getImageData(0, 0, canvas.width, outputHeight);
+        adjustedImageData = sampledImage; // Update to show the final adjusted image (filter + contrast/exposure)
+    } else {
+        // No filter or already filtered before resize (with contrast/exposure already applied)
+        sampledImage = adjustedImageData;
+    }
 
     const bits = new Uint8ClampedArray(outputHeight * outputWidthPixel / 8);
 
