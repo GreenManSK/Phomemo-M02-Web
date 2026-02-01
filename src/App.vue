@@ -56,6 +56,7 @@ function loadSavedSettings(): ImageConversionOptions {
                     exposure: parsed.exposure ?? defaultImageConversionOptions.exposure,
                     heightPercentage: parsed.heightPercentage ?? defaultImageConversionOptions.heightPercentage,
                     widthPercentage: parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
+                    paperThickness: parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
                 };
             }
         }

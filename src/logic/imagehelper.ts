@@ -34,8 +34,40 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     // Calculate horizontal offset to center the image
     const xOffset = Math.round((outputWidthPixel - actualImageWidth) / 2);
 
+    // Calculate adjusted contrast and exposure based on paper thickness
+    let adjustedContrast = options.contrast;
+    let adjustedExposure = options.exposure;
+    let adjustedThreshold = options.threshold;
+
+    switch (options.paperThickness) {
+        case 'light':
+            // Light - Lower heat, prevents oversaturation on thin paper
+            // Brighten output and use higher threshold
+            adjustedExposure = adjustedExposure * 1.15;
+            adjustedThreshold = Math.min(255, options.threshold + 12); // Higher threshold = lighter output
+            break;
+        case 'medium':
+            // Medium - Standard balanced output (no adjustments)
+            break;
+        case 'heavy':
+            // Heavy - Higher heat for thick paper, darker output
+            // Darken output and use lower threshold
+            adjustedExposure = adjustedExposure * 0.92;
+            adjustedThreshold = Math.max(0, options.threshold - 13); // Lower threshold = darker output
+            break;
+        case 'dedicated':
+            // Dedicated - Optimized mode with enhanced contrast
+            adjustedContrast = adjustedContrast * 1.1;
+            adjustedThreshold = Math.max(0, options.threshold - 3);
+            break;
+        case 'none':
+        default:
+            // No paper thickness adjustments
+            break;
+    }
+
     // Apply contrast and exposure filters
-    ctx.filter = `contrast(${options.contrast}) brightness(${options.exposure})`;
+    ctx.filter = `contrast(${adjustedContrast}) brightness(${adjustedExposure})`;
 
     if (options.rotation !== 0) {
         ctx.save();
@@ -68,7 +100,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             const getPixel = (x: number, y: number): boolean => (
                 sampledImage.data[(y * canvas.width + x) * 4] +
                 sampledImage.data[(y * canvas.width + x) * 4 + 1] +
-                sampledImage.data[(y * canvas.width + x) * 4 + 2]) < (options.threshold * 3.0);
+                sampledImage.data[(y * canvas.width + x) * 4 + 2]) < (adjustedThreshold * 3.0);
 
             for (let y = 0; y < outputHeight; y++) {
                 for (let x = 0; x < outputWidthPixel / 8; x++) {
@@ -103,7 +135,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = y * outputWidthPixel + x;
                     const oldPixel = grayscale[idx];
-                    const newPixel = oldPixel < options.threshold ? 0 : 255;
+                    const newPixel = oldPixel < adjustedThreshold ? 0 : 255;
                     grayscale[idx] = newPixel;
 
                     const error = oldPixel - newPixel;
@@ -130,7 +162,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < options.threshold;
+                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
                         const result = options.invert
                             ? (pixelValue ? 0 : 1)
                             : (pixelValue ? 1 : 0);
@@ -158,7 +190,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = y * outputWidthPixel + x;
                     const oldPixel = grayscale[idx];
-                    const newPixel = oldPixel < options.threshold ? 0 : 255;
+                    const newPixel = oldPixel < adjustedThreshold ? 0 : 255;
                     grayscale[idx] = newPixel;
 
                     const error = oldPixel - newPixel;
@@ -194,7 +226,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < options.threshold;
+                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
                         const result = options.invert
                             ? (pixelValue ? 0 : 1)
                             : (pixelValue ? 1 : 0);
@@ -232,8 +264,8 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                         // Scale Bayer matrix value (0-63) to create threshold offset (-32 to +32)
                         const bayerOffset = (bayerValue - 31.5) * 2;
 
-                        // Apply Bayer offset to the user threshold
-                        const finalThreshold = options.threshold + bayerOffset;
+                        // Apply Bayer offset to the adjusted threshold
+                        const finalThreshold = adjustedThreshold + bayerOffset;
 
                         const pixelValue = gray < finalThreshold;
                         const result = options.invert
@@ -263,7 +295,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = y * outputWidthPixel + x;
                     const oldPixel = grayscale[idx];
-                    const newPixel = oldPixel < options.threshold ? 0 : 255;
+                    const newPixel = oldPixel < adjustedThreshold ? 0 : 255;
                     grayscale[idx] = newPixel;
 
                     const error = oldPixel - newPixel;
@@ -289,7 +321,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < options.threshold;
+                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
                         const result = options.invert
                             ? (pixelValue ? 0 : 1)
                             : (pixelValue ? 1 : 0);

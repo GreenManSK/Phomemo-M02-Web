@@ -225,6 +225,7 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             exposure: options.exposure,
             heightPercentage: 100,
             widthPercentage: 100,
+            paperThickness: 'none',
         }
     );
 
