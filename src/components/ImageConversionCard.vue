@@ -85,6 +85,7 @@ const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] a
 const filterOrderOptions = ['before-resize', 'after-resize'] as const;
 const imageSmoothingQualityOptions = ['low', 'medium', 'high'] as const;
 const resizeAlgorithmOptions = ['canvas', 'nearest', 'linear', 'cubic', 'area', 'lanczos4'] as const;
+const sharpenOptions = ['none', 'light', 'medium', 'strong'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
@@ -101,6 +102,8 @@ const filterOrder = ref<'before-resize' | 'after-resize'>(props.initialOptions?.
 const imageSmoothingEnabled = ref(props.initialOptions?.imageSmoothingEnabled ?? true);
 const imageSmoothingQuality = ref<'low' | 'medium' | 'high'>(props.initialOptions?.imageSmoothingQuality ?? 'high');
 const resizeAlgorithm = ref<'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'>(props.initialOptions?.resizeAlgorithm ?? 'canvas');
+const sharpenBeforeResize = ref<'none' | 'light' | 'medium' | 'strong'>(props.initialOptions?.sharpenBeforeResize ?? 'none');
+const sharpenAfterResize = ref<'none' | 'light' | 'medium' | 'strong'>(props.initialOptions?.sharpenAfterResize ?? 'none');
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -117,6 +120,8 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     imageSmoothingEnabled: imageSmoothingEnabled.value,
     imageSmoothingQuality: imageSmoothingQuality.value,
     resizeAlgorithm: resizeAlgorithm.value,
+    sharpenBeforeResize: sharpenBeforeResize.value,
+    sharpenAfterResize: sharpenAfterResize.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -206,6 +211,32 @@ const heightInCm = computed(() => {
                         @click="emit('image-conversion-options-change', imageConversionOptions)"
                         :title="getResizeAlgorithmDescription(option)">
                         {{ option === 'lanczos4' ? 'Lanczos' : option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <Label class="font-medium" for="sharpen-before-resize">Sharpen Before Resize</Label>
+                    <Badge variant="secondary" class="text-xs">Preserves details</Badge>
+                    <Loader2 v-if="props.isProcessing && sharpenBeforeResize !== 'none'" :size="16" class="animate-spin text-blue-500" />
+                </div>
+                <ToggleGroup type="single" v-model="sharpenBeforeResize" id="sharpen-before-resize" :disabled="props.isProcessing">
+                    <ToggleGroupItem v-for="option in sharpenOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)">
+                        {{ option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <Label class="font-medium" for="sharpen-after-resize">Sharpen After Resize</Label>
+                    <Badge variant="secondary" class="text-xs">For thermal printing</Badge>
+                    <Loader2 v-if="props.isProcessing && sharpenAfterResize !== 'none'" :size="16" class="animate-spin text-blue-500" />
+                </div>
+                <ToggleGroup type="single" v-model="sharpenAfterResize" id="sharpen-after-resize" :disabled="props.isProcessing">
+                    <ToggleGroupItem v-for="option in sharpenOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)">
+                        {{ option.charAt(0).toUpperCase() + option.slice(1) }}
                     </ToggleGroupItem>
                 </ToggleGroup>
             </div>

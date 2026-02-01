@@ -19,6 +19,8 @@ export type ImageConversionOptions = {
     imageSmoothingEnabled: boolean; // if true, applies interpolation when resizing (default: true)
     imageSmoothingQuality: 'low' | 'medium' | 'high'; // quality of image smoothing interpolation
     resizeAlgorithm: 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'; // resize interpolation algorithm
+    sharpenBeforeResize: 'none' | 'light' | 'medium' | 'strong'; // sharpening applied before resize (preserves detail during downscaling)
+    sharpenAfterResize: 'none' | 'light' | 'medium' | 'strong'; // sharpening applied after resize (compensates for resize blur, recommended for thermal printing)
     // flip: boolean; // if true, the image is flipped horizontally
     // scale: number; // scale the image, 1 is no scaling, 2 is double size, etc.
     // crop: {
@@ -44,4 +46,6 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     imageSmoothingEnabled: true,
     imageSmoothingQuality: 'high',
     resizeAlgorithm: 'canvas',
+    sharpenBeforeResize: 'none',
+    sharpenAfterResize: 'none',
 };

@@ -9,6 +9,7 @@
 import cv from '@techstark/opencv-js';
 
 export type FilterType = 'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft';
+export type SharpenStrength = 'none' | 'light' | 'medium' | 'strong';
 
 // OpenCV initialization
 let cvReady = false;
@@ -312,6 +313,99 @@ function draftFilter(src: any): any {
     edges.delete();
 
     return result;
+}
+
+/**
+ * Sharpen Filter
+ * Applies unsharp masking with adjustable strength
+ * Best applied after resize for thermal printing
+ */
+export async function applySharpen(image: ImageBitmap, strength: SharpenStrength): Promise<ImageData> {
+    if (strength === 'none') {
+        const canvas = new OffscreenCanvas(image.width, image.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Failed to get canvas context');
+        ctx.drawImage(image, 0, 0);
+        return ctx.getImageData(0, 0, image.width, image.height);
+    }
+
+    // Ensure OpenCV is ready
+    await ensureOpenCVReady();
+
+    // Convert ImageBitmap to ImageData
+    const canvas = new OffscreenCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    ctx.drawImage(image, 0, 0);
+    const imageData = ctx.getImageData(0, 0, image.width, image.height);
+
+    // Convert ImageData to cv.Mat
+    const src = cv.matFromImageData(imageData);
+
+    let result: any;
+
+    try {
+        result = sharpenFilter(src, strength);
+
+        // Convert result back to ImageData
+        const outputImageData = new ImageData(
+            new Uint8ClampedArray(result.data),
+            result.cols,
+            result.rows
+        );
+
+        return outputImageData;
+    } finally {
+        // Cleanup
+        src.delete();
+        if (result) result.delete();
+    }
+}
+
+/**
+ * Internal sharpen implementation using Unsharp Masking
+ */
+function sharpenFilter(src: any, strength: SharpenStrength): any {
+    console.log(`Applying sharpen filter (${strength})...`);
+
+    // Determine sharpening parameters based on strength
+    let blurSigma: number;
+    let alpha: number;  // Weight for original image
+    let beta: number;   // Weight for blurred image (negative for sharpening)
+
+    switch (strength) {
+        case 'light':
+            blurSigma = 1.0;
+            alpha = 1.3;
+            beta = -0.3;
+            break;
+        case 'medium':
+            blurSigma = 1.5;
+            alpha = 1.6;
+            beta = -0.6;
+            break;
+        case 'strong':
+            blurSigma = 2.0;
+            alpha = 2.0;
+            beta = -1.0;
+            break;
+        default:
+            return src.clone();
+    }
+
+    // Apply Gaussian blur
+    let blurred = new cv.Mat();
+    cv.GaussianBlur(src, blurred, new cv.Size(0, 0), blurSigma);
+
+    // Unsharp mask: sharpened = original + alpha*(original - blurred)
+    // Which is equivalent to: (1+alpha)*original - alpha*blurred
+    // Or using addWeighted: alpha*original + beta*blurred where beta = -alpha/(1+alpha)
+    let sharpened = new cv.Mat();
+    cv.addWeighted(src, alpha, blurred, beta, 0, sharpened);
+
+    blurred.delete();
+
+    return sharpened;
 }
 
 // ============= Helper Functions =============

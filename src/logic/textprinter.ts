@@ -235,6 +235,8 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high',
             resizeAlgorithm: 'canvas',
+            sharpenBeforeResize: 'none',
+            sharpenAfterResize: 'none',
         }
     );
 

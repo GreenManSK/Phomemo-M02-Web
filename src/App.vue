@@ -72,6 +72,8 @@ function loadSavedSettings(): ImageConversionOptions {
                     imageSmoothingEnabled: parsed.imageSmoothingEnabled ?? defaultImageConversionOptions.imageSmoothingEnabled,
                     imageSmoothingQuality: parsed.imageSmoothingQuality ?? defaultImageConversionOptions.imageSmoothingQuality,
                     resizeAlgorithm: resizeAlgorithm as 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4',
+                    sharpenBeforeResize: parsed.sharpenBeforeResize ?? defaultImageConversionOptions.sharpenBeforeResize,
+                    sharpenAfterResize: parsed.sharpenAfterResize ?? defaultImageConversionOptions.sharpenAfterResize,
                 };
             }
         }

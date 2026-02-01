@@ -1,5 +1,5 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
-import { applyFilter } from "./phomemofilters";
+import { applyFilter, applySharpen } from "./phomemofilters";
 
 // @ts-ignore
 import cv from '@techstark/opencv-js';
@@ -143,6 +143,18 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         // Convert filtered ImageData back to ImageBitmap
         processedImage = await createImageBitmap(filteredImageData);
     }
+
+    // Apply sharpening before resize if specified
+    if (options.sharpenBeforeResize && options.sharpenBeforeResize !== 'none') {
+        console.log(`Applying ${options.sharpenBeforeResize} sharpening before resize...`);
+        const sharpenStartTime = performance.now();
+        const sharpenedImageData = await applySharpen(processedImage, options.sharpenBeforeResize);
+        console.log(`Sharpening applied in ${performance.now() - sharpenStartTime}ms`);
+
+        // Convert sharpened ImageData back to ImageBitmap
+        processedImage = await createImageBitmap(sharpenedImageData);
+    }
+
     // Calculate width percentage (how much of paper width the image takes)
     const widthPercentage = Math.max(1, Math.min(100, options.widthPercentage ?? 100));
     const actualImageWidth = Math.round(outputWidthPixel * (widthPercentage / 100));
@@ -309,6 +321,23 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     } else {
         // No filter or already filtered before resize (with contrast/exposure already applied)
         sampledImage = adjustedImageData;
+    }
+
+    // Apply sharpening after resize if specified (before dithering)
+    if (options.sharpenAfterResize && options.sharpenAfterResize !== 'none') {
+        console.log(`Applying ${options.sharpenAfterResize} sharpening after resize...`);
+        const sharpenStartTime = performance.now();
+
+        // Create a bitmap from the current sampledImage
+        const preSharpenBitmap = await createImageBitmap(sampledImage);
+
+        // Apply sharpening
+        const sharpenedImageData = await applySharpen(preSharpenBitmap, options.sharpenAfterResize);
+        console.log(`Sharpening applied in ${performance.now() - sharpenStartTime}ms`);
+
+        // Use the sharpened image for dithering and display
+        sampledImage = sharpenedImageData;
+        adjustedImageData = sharpenedImageData; // Update display preview with sharpened version
     }
 
     const bits = new Uint8ClampedArray(outputHeight * outputWidthPixel / 8);
