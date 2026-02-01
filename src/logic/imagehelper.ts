@@ -682,7 +682,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             const result = await convertImageToBitsInternal(image, outputWidthPixel, options);
 
             if (attempt > 0) {
-                console.log('✅ Retry successful!');
+                console.log('✅ Retry successful - recovered silently');
             }
 
             return result;
@@ -702,6 +702,9 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                 } catch (cleanupError) {
                     console.warn('Cleanup failed:', cleanupError);
                 }
+            } else {
+                // Final failure - user needs to refresh
+                alert(`❌ Image Conversion Failed\n\nPlease refresh the page to continue.\n\n(Error: ${errorMessage})`);
             }
         }
     }
