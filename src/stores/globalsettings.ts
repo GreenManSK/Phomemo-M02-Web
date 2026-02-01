@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 export type GlobalSettings = {
     pixelPerLine: number;
+    cmPerLine: number;
     showAllBluetoothDevices: boolean;
 };
 
@@ -15,6 +16,7 @@ function loadSettings(): GlobalSettings {
     } catch { }
     return {
         pixelPerLine: 576,
+        cmPerLine: 4.9,
         showAllBluetoothDevices: false,
     };
 }
@@ -31,6 +33,10 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
         settings.value.pixelPerLine = val;
     }
 
+    function setCmPerLine(val: number) {
+        settings.value.cmPerLine = val;
+    }
+
     function setShowAllBluetoothDevices(val: boolean) {
         settings.value.showAllBluetoothDevices = val;
     }
@@ -38,6 +44,7 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
     return {
         settings,
         setPixelPerLine,
+        setCmPerLine,
         setShowAllBluetoothDevices,
     };
 });

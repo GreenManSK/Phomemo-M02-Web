@@ -12,6 +12,10 @@ import Label from './ui/label/Label.vue';
 
 const props = defineProps<{
     initialOptions?: ImageConversionOptions;
+    originalWidth?: number;
+    originalHeight?: number;
+    pixelPerLine?: number;
+    cmPerLine?: number;
 }>();
 
 const emit = defineEmits<{
@@ -84,6 +88,38 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     heightPercentage: heightPercentage.value,
     widthPercentage: widthPercentage.value,
 }));
+
+// Calculate CM values based on print dimensions
+const widthInCm = computed(() => {
+    if (!props.cmPerLine) return null;
+    // Width is simply a percentage of the full printer width
+    const cm = props.cmPerLine * (widthPercentage.value / 100);
+    return cm.toFixed(2);
+});
+
+const heightInCm = computed(() => {
+    if (!props.originalWidth || !props.originalHeight || !props.pixelPerLine || !props.cmPerLine) return null;
+
+    // Account for rotation - 90 and 270 degrees swap width/height
+    const isRotated = rotation.value === 90 || rotation.value === 270;
+    const effectiveWidth = isRotated ? props.originalHeight : props.originalWidth;
+    const effectiveHeight = isRotated ? props.originalWidth : props.originalHeight;
+
+    if (!effectiveWidth || !effectiveHeight) return null;
+
+    // Calculate aspect ratio
+    const aspectRatio = effectiveHeight / effectiveWidth;
+
+    // Calculate final height in pixels:
+    // 1. Image is scaled to printer width (pixelPerLine)
+    // 2. Height is scaled proportionally based on aspect ratio
+    // 3. Apply height percentage
+    const heightInPixels = props.pixelPerLine * aspectRatio * (heightPercentage.value / 100);
+
+    // Convert to cm
+    const cm = (heightInPixels / props.pixelPerLine) * props.cmPerLine;
+    return cm.toFixed(2);
+});
 </script>
 
 <template>
@@ -177,6 +213,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                             <ChevronLeft :size="14" />
                         </Button>
                         <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ widthPercentage }}%</Badge>
+                        <Badge v-if="widthInCm" variant="secondary" class="text-xs font-semibold min-w-[3rem] text-center">{{ widthInCm }}cm</Badge>
                         <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustWidthPercentage(1)" title="Increase width by 1%">
                             <ChevronRight :size="14" />
                         </Button>
@@ -193,6 +230,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                             <ChevronLeft :size="14" />
                         </Button>
                         <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ heightPercentage }}%</Badge>
+                        <Badge v-if="heightInCm" variant="secondary" class="text-xs font-semibold min-w-[3rem] text-center">{{ heightInCm }}cm</Badge>
                         <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustHeightPercentage(1)" title="Increase height by 1%">
                             <ChevronRight :size="14" />
                         </Button>

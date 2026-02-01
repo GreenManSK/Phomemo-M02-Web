@@ -57,6 +57,12 @@ const pwaInstall = usePwaInstallStore();
                                 @click="globalSettings.setPixelPerLine(576)">576px</Button>
                         </div>
                     </div>
+                    <div>
+                        <Label for="cmPerLine">CM per Line</Label>
+                        <Input id="cmPerLine" type="number" step="0.1" v-model="globalSettings.settings.cmPerLine"
+                            class="mt-1" />
+                        <div class="text-xs text-muted-foreground mt-1">Physical width of print area in centimeters</div>
+                    </div>
 
                     <Separator />
 

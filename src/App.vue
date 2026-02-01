@@ -223,7 +223,14 @@ function restartApp() {
             <TabsContent value="image" class="space-y-6">
                 <PrinterConnectionCard :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices" />
                 <ImageDragAndDrop @imageLoaded="(image) => setImage(image)" />
-                <ImageConversionCard :key="componentKey" :initial-options="imageConversionOptions" @image-conversion-options-change="(options) => imageConversionOptions = options" />
+                <ImageConversionCard
+                    :key="componentKey"
+                    :initial-options="imageConversionOptions"
+                    :original-width="imageRef?.naturalWidth"
+                    :original-height="imageRef?.naturalHeight"
+                    :pixel-per-line="appSettings.settings.pixelPerLine"
+                    :cm-per-line="appSettings.settings.cmPerLine"
+                    @image-conversion-options-change="(options) => imageConversionOptions = options" />
             </TabsContent>
 
             <TabsContent value="text" class="space-y-6">
