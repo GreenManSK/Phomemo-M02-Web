@@ -39,18 +39,24 @@ function adjustThreshold(delta: number) {
 }
 
 const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
+const paperThicknessOptions = ['none', 'light', 'medium', 'heavy', 'dedicated'] as const;
+const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
 const algorithm = ref<'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'>(props.initialOptions?.algorithm ?? 'Atkinson');
 const contrast = ref(props.initialOptions?.contrast ?? 1.0);
 const exposure = ref(props.initialOptions?.exposure ?? 1.0);
+const paperThickness = ref<'none' | 'light' | 'medium' | 'heavy' | 'dedicated'>(props.initialOptions?.paperThickness ?? 'none');
+const preprocessFilter = ref<'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'>(props.initialOptions?.preprocessFilter ?? 'none');
 
 const textConversionOptions = computed((): TextConversionOptions => ({
     threshold: threshold.value,
     algorithm: algorithm.value,
     contrast: contrast.value,
     exposure: exposure.value,
+    paperThickness: paperThickness.value,
+    preprocessFilter: preprocessFilter.value,
 }));
 </script>
 
@@ -61,6 +67,24 @@ const textConversionOptions = computed((): TextConversionOptions => ({
             <CardTitle>Text Conversion</CardTitle>
         </CardHeader>
         <CardContent>
+            <div class="mb-4">
+                <Label class="block mb-2 font-medium" for="preprocess-filter">Preprocessing Filter</Label>
+                <ToggleGroup type="single" v-model="preprocessFilter" id="preprocess-filter">
+                    <ToggleGroupItem v-for="option in filterOptions" :key="option" :value="option"
+                        @click="emit('text-conversion-options-change', textConversionOptions)">
+                        {{ option === 'lineplus' ? 'Line+' : option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4">
+                <Label class="block mb-2 font-medium" for="paper-thickness">Paper Thickness</Label>
+                <ToggleGroup type="single" v-model="paperThickness" id="paper-thickness">
+                    <ToggleGroupItem v-for="option in paperThicknessOptions" :key="option" :value="option"
+                        @click="emit('text-conversion-options-change', textConversionOptions)">
+                        {{ option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
             <div class="mb-4">
                 <Label class="block mb-2 font-medium" for="algorithm">Algorithm</Label>
                 <ToggleGroup type="single" v-model="algorithm" id="algorithm">

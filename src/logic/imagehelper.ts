@@ -1,20 +1,35 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
+import { applyFilter } from "./phomemofilters";
 
 export type ImageConversionResult = {
     printerImage: PrinterImage;
     adjustedImageData: ImageData | null;
+    filteredImageData: ImageData | null;
 };
 
 export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
+    // Apply preprocessing filter if specified
+    let processedImage: ImageBitmap = image;
+    let filteredImageData: ImageData | null = null;
+
+    if (options.preprocessFilter && options.preprocessFilter !== 'none') {
+        console.log(`Applying ${options.preprocessFilter} filter...`);
+        const filterStartTime = performance.now();
+        filteredImageData = await applyFilter(image, options.preprocessFilter);
+        console.log(`Filter applied in ${performance.now() - filterStartTime}ms`);
+
+        // Convert filtered ImageData back to ImageBitmap
+        processedImage = await createImageBitmap(filteredImageData);
+    }
     // Calculate width percentage (how much of paper width the image takes)
     const widthPercentage = Math.max(1, Math.min(100, options.widthPercentage ?? 100));
     const actualImageWidth = Math.round(outputWidthPixel * (widthPercentage / 100));
 
     let fullOutputHeight: number;
     if (options.rotation === 90 || options.rotation === 270) {
-        fullOutputHeight = Math.round(actualImageWidth * (image.width / image.height));
+        fullOutputHeight = Math.round(actualImageWidth * (processedImage.width / processedImage.height));
     } else {
-        fullOutputHeight = Math.round(actualImageWidth * (image.height / image.width));
+        fullOutputHeight = Math.round(actualImageWidth * (processedImage.height / processedImage.width));
     }
 
     // Calculate the actual output height based on heightPercentage
@@ -29,7 +44,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    console.log(`Drawing image to canvas: ${image.width}x${image.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide, image at ${widthPercentage}% width) with options:`, options);
+    console.log(`Drawing image to canvas: ${processedImage.width}x${processedImage.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide, image at ${widthPercentage}% width) with options:`, options);
 
     // Calculate horizontal offset to center the image
     const xOffset = Math.round((outputWidthPixel - actualImageWidth) / 2);
@@ -74,13 +89,13 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(options.rotation * Math.PI / 180);
         if (options.rotation === 90 || options.rotation === 270) {
-            ctx.drawImage(image, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
+            ctx.drawImage(processedImage, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
         } else {
-            ctx.drawImage(image, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
+            ctx.drawImage(processedImage, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
         }
         ctx.restore();
     } else {
-        ctx.drawImage(image, xOffset, 0, actualImageWidth, fullOutputHeight);
+        ctx.drawImage(processedImage, xOffset, 0, actualImageWidth, fullOutputHeight);
     }
 
     // Reset filter
@@ -344,7 +359,8 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             height: outputHeight,
             bits: bits
         },
-        adjustedImageData
+        adjustedImageData,
+        filteredImageData
     };
 }
 

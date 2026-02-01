@@ -26,6 +26,8 @@ export type TextConversionOptions = {
     threshold: number;       // 0-255
     contrast: number;        // 0-2, 1 is normal
     exposure: number;        // 0-2, 1 is normal
+    paperThickness: 'none' | 'light' | 'medium' | 'heavy' | 'dedicated';
+    preprocessFilter: 'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft';
 };
 
 export const defaultTextBlockStyle: TextBlockStyle = {
@@ -158,6 +160,8 @@ export const defaultTextConversionOptions: TextConversionOptions = {
     threshold: 128,
     contrast: 1.0,
     exposure: 1.0,
+    paperThickness: 'none',
+    preprocessFilter: 'none',
 };
 
 /**
@@ -225,7 +229,8 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             exposure: options.exposure,
             heightPercentage: 100,
             widthPercentage: 100,
-            paperThickness: 'none',
+            paperThickness: options.paperThickness,
+            preprocessFilter: options.preprocessFilter,
         }
     );
 

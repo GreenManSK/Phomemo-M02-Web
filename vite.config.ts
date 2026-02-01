@@ -30,6 +30,10 @@ export default defineConfig({
             srcDir: 'src',
             filename: 'serviceworker.ts',
 
+            injectManifest: {
+                maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15MB to accommodate OpenCV.js
+            },
+
             devOptions: {
                 enabled: true,
                 type: 'module',

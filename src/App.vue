@@ -27,6 +27,7 @@ import { renderTextDocument, type TextDocument, type TextConversionOptions, defa
 
 const imageDataRef = ref<PrinterImage | null>(null);
 const adjustedImageRef = ref<HTMLImageElement | null>(null);
+const filteredImageRef = ref<HTMLImageElement | null>(null);
 const textPreviewImage = ref<PrinterImage | null>(null);
 const activeTab = ref<'image' | 'text'>('image');
 
@@ -57,6 +58,7 @@ function loadSavedSettings(): ImageConversionOptions {
                     heightPercentage: parsed.heightPercentage ?? defaultImageConversionOptions.heightPercentage,
                     widthPercentage: parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
                     paperThickness: parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
+                    preprocessFilter: 'none', // Always start with no filter (not saved)
                 };
             }
         }
@@ -77,6 +79,8 @@ function loadSavedTextSettings(): TextConversionOptions {
                     algorithm: parsed.algorithm ?? defaultTextConversionOptions.algorithm,
                     contrast: parsed.contrast ?? defaultTextConversionOptions.contrast,
                     exposure: parsed.exposure ?? defaultTextConversionOptions.exposure,
+                    paperThickness: parsed.paperThickness ?? defaultTextConversionOptions.paperThickness,
+                    preprocessFilter: 'none', // Always start with no filter (not saved)
                 };
             }
         }
@@ -90,11 +94,13 @@ const imageConversionOptions = ref(loadSavedSettings());
 const textConversionOptions = ref(loadSavedTextSettings());
 const imageRef = ref<HTMLImageElement | null>(null);
 const componentKey = ref(0);
+const isProcessingImage = ref(false);
 
-// Save settings to localStorage whenever they change
+// Save settings to localStorage whenever they change (except preprocessFilter)
 watch(imageConversionOptions, (newOptions) => {
     try {
-        localStorage.setItem('imageConversionOptions', JSON.stringify(newOptions));
+        const { preprocessFilter, ...optionsToSave } = newOptions;
+        localStorage.setItem('imageConversionOptions', JSON.stringify(optionsToSave));
     } catch (e) {
         console.warn('Failed to save settings:', e);
     }
@@ -102,7 +108,8 @@ watch(imageConversionOptions, (newOptions) => {
 
 watch(textConversionOptions, (newOptions) => {
     try {
-        localStorage.setItem('textConversionOptions', JSON.stringify(newOptions));
+        const { preprocessFilter, ...optionsToSave } = newOptions;
+        localStorage.setItem('textConversionOptions', JSON.stringify(optionsToSave));
     } catch (e) {
         console.warn('Failed to save text settings:', e);
     }
@@ -149,6 +156,8 @@ watch([imageRef, imageConversionOptions], async () => {
     const options = JSON.parse(JSON.stringify(imageConversionOptions.value));
 
     try {
+        isProcessingImage.value = true;
+
         // Convert to printer image (filters applied in worker)
         const image = await createImageBitmap(imageRef.value);
         const result = await converterStore.convertImage(image, appSettings.settings.pixelPerLine, options);
@@ -160,8 +169,17 @@ watch([imageRef, imageConversionOptions], async () => {
         } else {
             adjustedImageRef.value = null;
         }
+
+        // Convert filtered ImageData to HTMLImageElement
+        if (result.filteredImageData) {
+            filteredImageRef.value = await imageDataToImage(result.filteredImageData);
+        } else {
+            filteredImageRef.value = null;
+        }
     } catch (error) {
         console.error('Image conversion failed:', error);
+    } finally {
+        isProcessingImage.value = false;
     }
 });
 
@@ -267,6 +285,7 @@ function restartApp() {
                     :original-height="imageRef?.naturalHeight"
                     :pixel-per-line="appSettings.settings.pixelPerLine"
                     :cm-per-line="appSettings.settings.cmPerLine"
+                    :is-processing="isProcessingImage"
                     @image-conversion-options-change="(options) => imageConversionOptions = options" />
             </TabsContent>
 
@@ -282,6 +301,7 @@ function restartApp() {
                 :image="activeTab === 'image' ? imageDataRef : textPreviewImage"
                 :original-image="activeTab === 'image' ? imageRef : null"
                 :adjusted-image="activeTab === 'image' ? adjustedImageRef : null"
+                :filtered-image="activeTab === 'image' ? filteredImageRef : null"
                 style="width: 100%;"
             />
             <PrintButton

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Button from '@/components/ui/button/Button.vue';
 import type { ImageConversionOptions } from '@/logic/printerimage';
 import Switch from './ui/switch/Switch.vue';
-import { Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Settings, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next';
 import Label from './ui/label/Label.vue';
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const props = defineProps<{
     originalHeight?: number;
     pixelPerLine?: number;
     cmPerLine?: number;
+    isProcessing?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -68,6 +69,7 @@ function adjustWidthPercentage(delta: number) {
 const rotationOptions = [0, 90, 180, 270] as const;
 const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
 const paperThicknessOptions = ['none', 'light', 'medium', 'heavy', 'dedicated'] as const;
+const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
@@ -79,6 +81,7 @@ const exposure = ref(props.initialOptions?.exposure ?? 1.0);
 const heightPercentage = ref(props.initialOptions?.heightPercentage ?? 100);
 const widthPercentage = ref(props.initialOptions?.widthPercentage ?? 100);
 const paperThickness = ref<'none' | 'light' | 'medium' | 'heavy' | 'dedicated'>(props.initialOptions?.paperThickness ?? 'none');
+const preprocessFilter = ref<'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft'>(props.initialOptions?.preprocessFilter ?? 'none');
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -90,6 +93,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     heightPercentage: heightPercentage.value,
     widthPercentage: widthPercentage.value,
     paperThickness: paperThickness.value,
+    preprocessFilter: preprocessFilter.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -132,6 +136,19 @@ const heightInCm = computed(() => {
             <CardTitle>Select Image</CardTitle>
         </CardHeader>
         <CardContent>
+            <div class="mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <Label class="font-medium" for="preprocess-filter">Preprocessing Filter</Label>
+                    <Loader2 v-if="props.isProcessing && preprocessFilter !== 'none'" :size="16" class="animate-spin text-blue-500" />
+                    <span v-if="props.isProcessing && preprocessFilter !== 'none'" class="text-sm text-blue-500">Processing...</span>
+                </div>
+                <ToggleGroup type="single" v-model="preprocessFilter" id="preprocess-filter" :disabled="props.isProcessing">
+                    <ToggleGroupItem v-for="option in filterOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)">
+                        {{ option === 'lineplus' ? 'Line+' : option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
             <div class="mb-4">
                 <Label class="block mb-2 font-medium" for="paper-thickness">Paper Thickness</Label>
                 <ToggleGroup type="single" v-model="paperThickness" id="paper-thickness">

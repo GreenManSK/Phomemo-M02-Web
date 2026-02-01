@@ -225,7 +225,7 @@ const actionButtonText = computed(() => {
                                         <span v-if="block.style.italic" class="ml-1 text-xs text-gray-500">[I]</span>
                                         <span v-if="block.style.underline" class="ml-1 text-xs text-gray-500">[U]</span>
                                     </div>
-                                    <div class="text-sm text-gray-600 truncate">{{ block.content }}</div>
+                                    <div class="text-sm text-gray-600 break-words whitespace-pre-wrap line-clamp-3">{{ block.content }}</div>
                                 </div>
                                 <div class="flex gap-1 flex-shrink-0">
                                     <Button

@@ -14,6 +14,7 @@ const props = defineProps<{
     image: PrinterImage | null; // Optional image prop
     originalImage: HTMLImageElement | null; // Optional original image prop
     adjustedImage: HTMLImageElement | null; // Optional adjusted image prop (with contrast/exposure)
+    filteredImage: HTMLImageElement | null; // Optional filtered image prop (with preprocessing filter applied)
 }>();
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -139,6 +140,9 @@ watch([canvasRef, props], async () => {
                     <TabsTrigger value="adjusted" :disabled="!props.adjustedImage">
                         Adjusted
                     </TabsTrigger>
+                    <TabsTrigger value="filtered" :disabled="!props.filteredImage">
+                        Filtered
+                    </TabsTrigger>
                     <TabsTrigger value="password" :disabled="!props.originalImage">
                         Original
                     </TabsTrigger>
@@ -148,6 +152,9 @@ watch([canvasRef, props], async () => {
                 </TabsContent>
                 <TabsContent value="adjusted">
                     <img :src="props.adjustedImage?.src" alt="Adjusted Image" style="outline: 2px solid #666;" />
+                </TabsContent>
+                <TabsContent value="filtered">
+                    <img :src="props.filteredImage?.src" alt="Filtered Image" style="outline: 2px solid #666;" />
                 </TabsContent>
                 <TabsContent value="password">
                     <img :src="props.originalImage?.src" alt="Original Image" style="outline: 2px solid #666;" />
