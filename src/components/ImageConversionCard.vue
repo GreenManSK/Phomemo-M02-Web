@@ -65,6 +65,18 @@ function adjustWidthPercentage(delta: number) {
     emitChanges();
 }
 
+function getResizeAlgorithmDescription(algorithm: string): string {
+    const descriptions = {
+        'canvas': 'Browser canvas resize (fastest, basic quality)',
+        'nearest': 'Nearest neighbor - fastest OpenCV, pixelated',
+        'linear': 'Bilinear interpolation - fast, smooth',
+        'cubic': 'Bicubic interpolation - slower, high quality',
+        'area': 'Pixel area relation - best for downscaling',
+        'lanczos4': 'Lanczos 8x8 - slowest, highest quality'
+    };
+    return descriptions[algorithm as keyof typeof descriptions] || '';
+}
+
 
 const rotationOptions = [0, 90, 180, 270] as const;
 const algorithmOptions = ['Basic', 'Dither', 'Atkinson', 'Bayer', 'SierraLite'] as const;
@@ -72,6 +84,7 @@ const paperThicknessOptions = ['none', 'light', 'medium', 'heavy', 'dedicated'] 
 const filterOptions = ['none', 'portrait', 'pet', 'lineplus', 'auto', 'draft'] as const;
 const filterOrderOptions = ['before-resize', 'after-resize'] as const;
 const imageSmoothingQualityOptions = ['low', 'medium', 'high'] as const;
+const resizeAlgorithmOptions = ['canvas', 'nearest', 'linear', 'cubic', 'area', 'lanczos4'] as const;
 
 // Initialize with saved settings or defaults
 const threshold = ref(props.initialOptions?.threshold ?? 128);
@@ -87,6 +100,7 @@ const preprocessFilter = ref<'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' |
 const filterOrder = ref<'before-resize' | 'after-resize'>(props.initialOptions?.filterOrder ?? 'before-resize');
 const imageSmoothingEnabled = ref(props.initialOptions?.imageSmoothingEnabled ?? true);
 const imageSmoothingQuality = ref<'low' | 'medium' | 'high'>(props.initialOptions?.imageSmoothingQuality ?? 'high');
+const resizeAlgorithm = ref<'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'>(props.initialOptions?.resizeAlgorithm ?? 'canvas');
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -102,6 +116,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     filterOrder: filterOrder.value,
     imageSmoothingEnabled: imageSmoothingEnabled.value,
     imageSmoothingQuality: imageSmoothingQuality.value,
+    resizeAlgorithm: resizeAlgorithm.value,
 }));
 
 // Calculate CM values based on print dimensions
@@ -185,6 +200,16 @@ const heightInCm = computed(() => {
                 </ToggleGroup>
             </div>
             <div class="mb-4">
+                <Label class="block mb-2 font-medium" for="resize-algorithm">Resize Algorithm</Label>
+                <ToggleGroup type="single" v-model="resizeAlgorithm" id="resize-algorithm">
+                    <ToggleGroupItem v-for="option in resizeAlgorithmOptions" :key="option" :value="option"
+                        @click="emit('image-conversion-options-change', imageConversionOptions)"
+                        :title="getResizeAlgorithmDescription(option)">
+                        {{ option === 'lanczos4' ? 'Lanczos' : option.charAt(0).toUpperCase() + option.slice(1) }}
+                    </ToggleGroupItem>
+                </ToggleGroup>
+            </div>
+            <div class="mb-4" v-if="resizeAlgorithm === 'canvas'">
                 <Label class="block mb-2 font-medium" for="image-smoothing">Image Smoothing</Label>
                 <div class="flex items-center space-x-2 mb-2">
                     <Switch id="image-smoothing" v-model="imageSmoothingEnabled"

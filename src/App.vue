@@ -49,6 +49,14 @@ function loadSavedSettings(): ImageConversionOptions {
             const parsed = JSON.parse(saved);
             // Validate the loaded settings have all required fields
             if (parsed && typeof parsed === 'object') {
+                // Validate and normalize resizeAlgorithm (handle old values)
+                const validResizeAlgorithms = ['canvas', 'nearest', 'linear', 'cubic', 'area', 'lanczos4'];
+                let resizeAlgorithm = parsed.resizeAlgorithm ?? defaultImageConversionOptions.resizeAlgorithm;
+                if (!validResizeAlgorithms.includes(resizeAlgorithm)) {
+                    console.warn(`Invalid resizeAlgorithm "${resizeAlgorithm}" in saved settings, defaulting to "canvas"`);
+                    resizeAlgorithm = 'canvas';
+                }
+
                 return {
                     rotation: parsed.rotation ?? defaultImageConversionOptions.rotation,
                     threshold: parsed.threshold ?? defaultImageConversionOptions.threshold,
@@ -61,6 +69,9 @@ function loadSavedSettings(): ImageConversionOptions {
                     paperThickness: parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
                     preprocessFilter: 'none', // Always start with no filter (not saved)
                     filterOrder: parsed.filterOrder ?? defaultImageConversionOptions.filterOrder,
+                    imageSmoothingEnabled: parsed.imageSmoothingEnabled ?? defaultImageConversionOptions.imageSmoothingEnabled,
+                    imageSmoothingQuality: parsed.imageSmoothingQuality ?? defaultImageConversionOptions.imageSmoothingQuality,
+                    resizeAlgorithm: resizeAlgorithm as 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4',
                 };
             }
         }

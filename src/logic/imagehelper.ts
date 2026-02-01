@@ -1,11 +1,131 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
 import { applyFilter } from "./phomemofilters";
 
+// @ts-ignore
+import cv from '@techstark/opencv-js';
+
 export type ImageConversionResult = {
     printerImage: PrinterImage;
     adjustedImageData: ImageData | null;
     filteredImageData: ImageData | null;
 };
+
+// OpenCV initialization state
+let cvReady = false;
+let cvReadyPromise: Promise<void> | null = null;
+
+/**
+ * Ensure OpenCV is loaded and ready (similar to phomemofilters.ts implementation)
+ */
+async function waitForOpenCV(): Promise<void> {
+    if (cvReady) return;
+
+    if (!cvReadyPromise) {
+        cvReadyPromise = new Promise((resolve, reject) => {
+            if (cv && cv.Mat) {
+                cvReady = true;
+                console.log('OpenCV.js ready for resize');
+                resolve();
+            } else if (cv && typeof cv.onRuntimeInitialized === 'function') {
+                cv.onRuntimeInitialized = () => {
+                    cvReady = true;
+                    console.log('OpenCV.js initialized for resize');
+                    resolve();
+                };
+            } else {
+                // For OffscreenCanvas/Worker environment
+                const checkReady = setInterval(() => {
+                    if (cv && cv.Mat) {
+                        cvReady = true;
+                        clearInterval(checkReady);
+                        console.log('OpenCV.js ready (polled)');
+                        resolve();
+                    }
+                }, 100);
+
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    clearInterval(checkReady);
+                    reject(new Error('OpenCV failed to load within 10 seconds'));
+                }, 10000);
+            }
+        });
+    }
+
+    return cvReadyPromise;
+}
+
+/**
+ * Resize an ImageBitmap using OpenCV with specified interpolation algorithm
+ */
+async function resizeWithOpenCV(
+    image: ImageBitmap,
+    targetWidth: number,
+    targetHeight: number,
+    algorithm: 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'
+): Promise<ImageBitmap> {
+    // Ensure OpenCV is loaded
+    await waitForOpenCV();
+
+    // Validate inputs
+    if (!targetWidth || !targetHeight || isNaN(targetWidth) || isNaN(targetHeight)) {
+        throw new Error(`Invalid resize dimensions: ${targetWidth}x${targetHeight}`);
+    }
+
+    // Convert ImageBitmap to canvas for OpenCV
+    const tempCanvas = new OffscreenCanvas(image.width, image.height);
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) throw new Error('Failed to get temp canvas context');
+    tempCtx.drawImage(image, 0, 0);
+    const imageData = tempCtx.getImageData(0, 0, image.width, image.height);
+
+    // Create OpenCV Mat from ImageData
+    const src = cv.matFromImageData(imageData);
+    const dst = new cv.Mat();
+
+    try {
+        // Map algorithm name to OpenCV interpolation flag
+        const interpolationMap: Record<string, number> = {
+            'nearest': cv.INTER_NEAREST,
+            'linear': cv.INTER_LINEAR,
+            'cubic': cv.INTER_CUBIC,
+            'area': cv.INTER_AREA,
+            'lanczos4': cv.INTER_LANCZOS4,
+        };
+
+        const interpolation = interpolationMap[algorithm];
+        if (interpolation === undefined) {
+            console.error(`Unknown interpolation algorithm: ${algorithm}, falling back to linear`);
+            // Fallback to linear interpolation instead of throwing
+            const fallbackInterpolation = cv.INTER_LINEAR;
+            const dsize = new cv.Size(Math.round(targetWidth), Math.round(targetHeight));
+            cv.resize(src, dst, dsize, 0, 0, fallbackInterpolation);
+        } else {
+            // Perform resize with selected algorithm
+            const dsize = new cv.Size(Math.round(targetWidth), Math.round(targetHeight));
+            cv.resize(src, dst, dsize, 0, 0, interpolation);
+        }
+
+        // Convert back to ImageData
+        const resizedCanvas = new OffscreenCanvas(targetWidth, targetHeight);
+        const resizedCtx = resizedCanvas.getContext('2d');
+        if (!resizedCtx) throw new Error('Failed to get resized canvas context');
+
+        const resizedImageData = new ImageData(
+            new Uint8ClampedArray(dst.data),
+            dst.cols,
+            dst.rows
+        );
+        resizedCtx.putImageData(resizedImageData, 0, 0);
+
+        // Convert back to ImageBitmap
+        return await createImageBitmap(resizedCanvas);
+    } finally {
+        // Clean up OpenCV Mats
+        src.delete();
+        dst.delete();
+    }
+}
 
 export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
     // Apply preprocessing filter if specified AND filterOrder is 'before-resize' (or not specified for backwards compatibility)
@@ -38,13 +158,43 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
     const heightPercentage = Math.max(0, Math.min(100, options.heightPercentage ?? 100));
     const outputHeight = Math.round(fullOutputHeight * (heightPercentage / 100));
 
+    // Resize image using OpenCV if a non-canvas algorithm is selected
+    let resizedImage = processedImage;
+    if (options.resizeAlgorithm !== 'canvas') {
+        console.log(`Resizing with OpenCV algorithm: ${options.resizeAlgorithm}`);
+        const resizeStartTime = performance.now();
+
+        // Calculate target dimensions based on rotation
+        let targetWidth: number, targetHeight: number;
+        if (options.rotation === 90 || options.rotation === 270) {
+            targetWidth = fullOutputHeight;
+            targetHeight = actualImageWidth;
+        } else {
+            targetWidth = actualImageWidth;
+            targetHeight = fullOutputHeight;
+        }
+
+        resizedImage = await resizeWithOpenCV(
+            processedImage,
+            targetWidth,
+            targetHeight,
+            options.resizeAlgorithm
+        );
+        console.log(`OpenCV resize completed in ${performance.now() - resizeStartTime}ms`);
+    }
+
     const canvas = new OffscreenCanvas(outputWidthPixel, fullOutputHeight);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get canvas context');
 
     // Configure image smoothing
-    ctx.imageSmoothingEnabled = options.imageSmoothingEnabled;
-    ctx.imageSmoothingQuality = options.imageSmoothingQuality;
+    // Disable smoothing if using OpenCV (already resized) or if user disabled it
+    if (options.resizeAlgorithm !== 'canvas') {
+        ctx.imageSmoothingEnabled = false;
+    } else {
+        ctx.imageSmoothingEnabled = options.imageSmoothingEnabled;
+        ctx.imageSmoothingQuality = options.imageSmoothingQuality;
+    }
 
     // Fill with white background
     ctx.fillStyle = '#ffffff';
@@ -100,13 +250,27 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(options.rotation * Math.PI / 180);
         if (options.rotation === 90 || options.rotation === 270) {
-            ctx.drawImage(processedImage, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
+            // When using OpenCV, image is already resized, so draw at actual size
+            if (options.resizeAlgorithm !== 'canvas') {
+                ctx.drawImage(resizedImage, -resizedImage.width / 2, -resizedImage.height / 2);
+            } else {
+                ctx.drawImage(resizedImage, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
+            }
         } else {
-            ctx.drawImage(processedImage, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
+            if (options.resizeAlgorithm !== 'canvas') {
+                ctx.drawImage(resizedImage, -resizedImage.width / 2, -resizedImage.height / 2);
+            } else {
+                ctx.drawImage(resizedImage, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
+            }
         }
         ctx.restore();
     } else {
-        ctx.drawImage(processedImage, xOffset, 0, actualImageWidth, fullOutputHeight);
+        // When using OpenCV, image is already resized, so draw at actual size
+        if (options.resizeAlgorithm !== 'canvas') {
+            ctx.drawImage(resizedImage, xOffset, 0);
+        } else {
+            ctx.drawImage(resizedImage, xOffset, 0, actualImageWidth, fullOutputHeight);
+        }
     }
 
     // Reset filter

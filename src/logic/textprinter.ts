@@ -231,6 +231,10 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             widthPercentage: 100,
             paperThickness: options.paperThickness,
             preprocessFilter: options.preprocessFilter,
+            filterOrder: 'before-resize',
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high',
+            resizeAlgorithm: 'canvas',
         }
     );
 
