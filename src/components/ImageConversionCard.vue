@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useThrottleFn } from '@vueuse/core';
+import { useThrottleFn, useDebounceFn } from '@vueuse/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Badge } from '@/components/ui/badge';
@@ -18,25 +18,46 @@ const emit = defineEmits<{
     (e: 'image-conversion-options-change', value: ImageConversionOptions): void;
 }>();
 
-// Throttled emit function - allows updates every 100ms during dragging
+// Throttled emit function - allows updates every 300ms during dragging
 const throttledEmit = useThrottleFn(() => {
     emit('image-conversion-options-change', imageConversionOptions.value);
 }, 300);
 
+// Debounced emit function - ensures the final value is emitted after user stops
+const debouncedEmit = useDebounceFn(() => {
+    emit('image-conversion-options-change', imageConversionOptions.value);
+}, 300);
+
+// Combined emit - throttle for intermediate updates, debounce ensures final update
+function emitChanges() {
+    throttledEmit();
+    debouncedEmit();
+}
+
 // Increment/decrement functions for fine-tuning
 function adjustContrast(delta: number) {
     contrast.value = Math.max(0, Math.min(2, contrast.value + delta));
-    throttledEmit();
+    emitChanges();
 }
 
 function adjustExposure(delta: number) {
     exposure.value = Math.max(0, Math.min(2, exposure.value + delta));
-    throttledEmit();
+    emitChanges();
 }
 
 function adjustThreshold(delta: number) {
     threshold.value = Math.max(0, Math.min(255, threshold.value + delta));
-    throttledEmit();
+    emitChanges();
+}
+
+function adjustHeightPercentage(delta: number) {
+    heightPercentage.value = Math.max(1, Math.min(100, heightPercentage.value + delta));
+    emitChanges();
+}
+
+function adjustWidthPercentage(delta: number) {
+    widthPercentage.value = Math.max(1, Math.min(100, widthPercentage.value + delta));
+    emitChanges();
 }
 
 
@@ -50,6 +71,8 @@ const invert = ref(props.initialOptions?.invert ?? false);
 const algorithm = ref<'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'>(props.initialOptions?.algorithm ?? 'Basic');
 const contrast = ref(props.initialOptions?.contrast ?? 1.0);
 const exposure = ref(props.initialOptions?.exposure ?? 1.0);
+const heightPercentage = ref(props.initialOptions?.heightPercentage ?? 100);
+const widthPercentage = ref(props.initialOptions?.widthPercentage ?? 100);
 
 const imageConversionOptions = computed((): ImageConversionOptions => ({
     threshold: threshold.value,
@@ -58,6 +81,8 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
     algorithm: algorithm.value,
     contrast: contrast.value,
     exposure: exposure.value,
+    heightPercentage: heightPercentage.value,
+    widthPercentage: widthPercentage.value,
 }));
 </script>
 
@@ -91,7 +116,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     </div>
                 </div>
                 <input id="contrast" type="range" min="0" max="2" step="0.01" v-model.number="contrast" class="w-full"
-                    @input="throttledEmit" />
+                    @input="emitChanges" />
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
@@ -107,7 +132,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     </div>
                 </div>
                 <input id="exposure" type="range" min="0" max="2" step="0.01" v-model.number="exposure" class="w-full"
-                    @input="throttledEmit" />
+                    @input="emitChanges" />
             </div>
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
@@ -123,7 +148,7 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                     </div>
                 </div>
                 <input id="threshold" type="range" min="0" max="255" v-model.number="threshold" class="w-full"
-                    @input="throttledEmit" />
+                    @input="emitChanges" />
             </div>
             <div class="mb-4">
                 <Label class="block mb-2 font-medium" for="rotation">Rotation</Label>
@@ -143,6 +168,38 @@ const imageConversionOptions = computed((): ImageConversionOptions => ({
                         Invert Colors
                     </Label>
                 </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <Label class="font-medium" for="width-percentage">Print Width</Label>
+                    <div class="flex items-center gap-1">
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustWidthPercentage(-1)" title="Decrease width by 1%">
+                            <ChevronLeft :size="14" />
+                        </Button>
+                        <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ widthPercentage }}%</Badge>
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustWidthPercentage(1)" title="Increase width by 1%">
+                            <ChevronRight :size="14" />
+                        </Button>
+                    </div>
+                </div>
+                <input id="width-percentage" type="range" min="1" max="100" v-model.number="widthPercentage" class="w-full"
+                    @input="emitChanges" />
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <Label class="font-medium" for="height-percentage">Print Height</Label>
+                    <div class="flex items-center gap-1">
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustHeightPercentage(-1)" title="Decrease height by 1%">
+                            <ChevronLeft :size="14" />
+                        </Button>
+                        <Badge variant="outline" class="text-xs font-semibold min-w-[3rem] text-center">{{ heightPercentage }}%</Badge>
+                        <Button variant="outline" size="icon" class="h-6 w-6" @click="adjustHeightPercentage(1)" title="Increase height by 1%">
+                            <ChevronRight :size="14" />
+                        </Button>
+                    </div>
+                </div>
+                <input id="height-percentage" type="range" min="1" max="100" v-model.number="heightPercentage" class="w-full"
+                    @input="emitChanges" />
             </div>
 
             <!-- todo crop -->

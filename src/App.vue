@@ -53,6 +53,8 @@ function loadSavedSettings(): ImageConversionOptions {
                     algorithm: parsed.algorithm ?? defaultImageConversionOptions.algorithm,
                     contrast: parsed.contrast ?? defaultImageConversionOptions.contrast,
                     exposure: parsed.exposure ?? defaultImageConversionOptions.exposure,
+                    heightPercentage: parsed.heightPercentage ?? defaultImageConversionOptions.heightPercentage,
+                    widthPercentage: parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
                 };
             }
         }

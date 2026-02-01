@@ -1,19 +1,33 @@
 import type { ImageConversionOptions, PrinterImage } from "./printerimage";
 
 export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<PrinterImage> {
-    let outputHeight: number;
+    // Calculate width percentage (how much of paper width the image takes)
+    const widthPercentage = Math.max(1, Math.min(100, options.widthPercentage ?? 100));
+    const actualImageWidth = Math.round(outputWidthPixel * (widthPercentage / 100));
+
+    let fullOutputHeight: number;
     if (options.rotation === 90 || options.rotation === 270) {
-        outputHeight = Math.round(outputWidthPixel * (image.width / image.height));
+        fullOutputHeight = Math.round(actualImageWidth * (image.width / image.height));
     } else {
-        outputHeight = Math.round(outputWidthPixel * (image.height / image.width));
+        fullOutputHeight = Math.round(actualImageWidth * (image.height / image.width));
     }
 
-    const canvas = new OffscreenCanvas(outputWidthPixel, outputHeight);
+    // Calculate the actual output height based on heightPercentage
+    const heightPercentage = Math.max(0, Math.min(100, options.heightPercentage ?? 100));
+    const outputHeight = Math.round(fullOutputHeight * (heightPercentage / 100));
+
+    const canvas = new OffscreenCanvas(outputWidthPixel, fullOutputHeight);
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Failed to get canvas context');
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log(`Drawing image to canvas: ${image.width}x${image.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide) with options:`, options);
+    // Fill with white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    console.log(`Drawing image to canvas: ${image.width}x${image.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide, image at ${widthPercentage}% width) with options:`, options);
+
+    // Calculate horizontal offset to center the image
+    const xOffset = Math.round((outputWidthPixel - actualImageWidth) / 2);
 
     // Apply contrast and exposure filters
     ctx.filter = `contrast(${options.contrast}) brightness(${options.exposure})`;
@@ -23,19 +37,20 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(options.rotation * Math.PI / 180);
         if (options.rotation === 90 || options.rotation === 270) {
-            ctx.drawImage(image, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
+            ctx.drawImage(image, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
         } else {
-            ctx.drawImage(image, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+            ctx.drawImage(image, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
         }
         ctx.restore();
     } else {
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, xOffset, 0, actualImageWidth, fullOutputHeight);
     }
 
     // Reset filter
     ctx.filter = 'none';
 
-    const sampledImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // Only sample the top portion based on heightPercentage
+    const sampledImage = ctx.getImageData(0, 0, canvas.width, outputHeight);
 
     const bits = new Uint8ClampedArray(outputHeight * outputWidthPixel / 8);
 

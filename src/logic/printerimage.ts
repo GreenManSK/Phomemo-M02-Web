@@ -11,6 +11,8 @@ export type ImageConversionOptions = {
     algorithm: 'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite'; // conversion algorithm
     contrast: number; // 0-2, 1 is normal contrast
     exposure: number; // 0-2, 1 is normal exposure (brightness)
+    heightPercentage: number; // 0-100, percentage of image height to print (from top)
+    widthPercentage: number; // 0-100, percentage of paper width the image takes (centered, white on sides)
     // flip: boolean; // if true, the image is flipped horizontally
     // scale: number; // scale the image, 1 is no scaling, 2 is double size, etc.
     // crop: {
@@ -28,4 +30,6 @@ export const defaultImageConversionOptions: ImageConversionOptions = {
     algorithm: 'Basic',
     contrast: 1.0,
     exposure: 1.0,
+    heightPercentage: 100,
+    widthPercentage: 100,
 };

@@ -223,6 +223,8 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
             algorithm: options.algorithm,
             contrast: options.contrast,
             exposure: options.exposure,
+            heightPercentage: 100,
+            widthPercentage: 100,
         }
     );
 
