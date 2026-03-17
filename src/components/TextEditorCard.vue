@@ -15,7 +15,12 @@ import {
 } from '@/components/ui/select';
 import { Type, Trash2, Edit, Plus } from 'lucide-vue-next';
 import { useTextDocumentStore } from '@/stores/textdocument';
-import { defaultTextBlockStyle, availableFonts, type TextBlock, type TextBlockStyle } from '@/logic/textprinter';
+import {
+    defaultTextBlockStyle,
+    availableFonts,
+    type TextBlock,
+    type TextBlockStyle,
+} from '@/logic/textprinter';
 
 const textDocumentStore = useTextDocumentStore();
 
@@ -33,25 +38,37 @@ const editingBlockId = ref<string | null>(null);
 const activeStyles = ref<string[]>([]);
 
 // Watch active styles and update currentStyle
-watch(activeStyles, (newStyles) => {
-    currentStyle.value.bold = newStyles.includes('bold');
-    currentStyle.value.italic = newStyles.includes('italic');
-    currentStyle.value.underline = newStyles.includes('underline');
-}, { deep: true });
+watch(
+    activeStyles,
+    (newStyles) => {
+        currentStyle.value.bold = newStyles.includes('bold');
+        currentStyle.value.italic = newStyles.includes('italic');
+        currentStyle.value.underline = newStyles.includes('underline');
+    },
+    { deep: true },
+);
 
 // Watch currentStyle and update activeStyles
-watch(currentStyle, (newStyle) => {
-    const styles: string[] = [];
-    if (newStyle.bold) styles.push('bold');
-    if (newStyle.italic) styles.push('italic');
-    if (newStyle.underline) styles.push('underline');
-    activeStyles.value = styles;
-}, { deep: true, immediate: true });
+watch(
+    currentStyle,
+    (newStyle) => {
+        const styles: string[] = [];
+        if (newStyle.bold) styles.push('bold');
+        if (newStyle.italic) styles.push('italic');
+        if (newStyle.underline) styles.push('underline');
+        activeStyles.value = styles;
+    },
+    { deep: true, immediate: true },
+);
 
 // Emit current text and style for live preview
-watch([currentText, currentStyle], () => {
-    emit('current-text-change', currentText.value, currentStyle.value);
-}, { deep: true });
+watch(
+    [currentText, currentStyle],
+    () => {
+        emit('current-text-change', currentText.value, currentStyle.value);
+    },
+    { deep: true },
+);
 
 /**
  * Add or update text block
@@ -221,11 +238,27 @@ const actionButtonText = computed(() => {
                                 <div class="flex-1 min-w-0">
                                     <div class="text-sm font-medium text-gray-700 mb-1">
                                         {{ block.style.fontFamily }} - {{ block.style.fontSize }}px
-                                        <span v-if="block.style.bold" class="ml-1 text-xs text-gray-500">[B]</span>
-                                        <span v-if="block.style.italic" class="ml-1 text-xs text-gray-500">[I]</span>
-                                        <span v-if="block.style.underline" class="ml-1 text-xs text-gray-500">[U]</span>
+                                        <span
+                                            v-if="block.style.bold"
+                                            class="ml-1 text-xs text-gray-500"
+                                            >[B]</span
+                                        >
+                                        <span
+                                            v-if="block.style.italic"
+                                            class="ml-1 text-xs text-gray-500"
+                                            >[I]</span
+                                        >
+                                        <span
+                                            v-if="block.style.underline"
+                                            class="ml-1 text-xs text-gray-500"
+                                            >[U]</span
+                                        >
                                     </div>
-                                    <div class="text-sm text-gray-600 break-words whitespace-pre-wrap line-clamp-3">{{ block.content }}</div>
+                                    <div
+                                        class="text-sm text-gray-600 break-words whitespace-pre-wrap line-clamp-3"
+                                    >
+                                        {{ block.content }}
+                                    </div>
                                 </div>
                                 <div class="flex gap-1 flex-shrink-0">
                                     <Button

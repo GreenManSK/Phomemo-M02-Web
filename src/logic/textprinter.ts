@@ -2,15 +2,15 @@ import { convertImageToBits } from './imagehelper';
 import type { PrinterImage } from './printerimage';
 
 export type TextBlockStyle = {
-    fontFamily: string;      // e.g., 'Arial', 'Courier New'
-    fontSize: number;        // in pixels
+    fontFamily: string; // e.g., 'Arial', 'Courier New'
+    fontSize: number; // in pixels
     bold: boolean;
     italic: boolean;
     underline: boolean;
 };
 
 export type TextBlock = {
-    id: string;              // UUID
+    id: string; // UUID
     content: string;
     style: TextBlockStyle;
     order: number;
@@ -18,14 +18,14 @@ export type TextBlock = {
 
 export type TextDocument = {
     blocks: TextBlock[];
-    paperWidth: number;      // from global settings
+    paperWidth: number; // from global settings
 };
 
 export type TextConversionOptions = {
     algorithm: 'Basic' | 'Dither' | 'Atkinson' | 'Bayer' | 'SierraLite';
-    threshold: number;       // 0-255
-    contrast: number;        // 0-2, 1 is normal
-    exposure: number;        // 0-2, 1 is normal
+    threshold: number; // 0-255
+    contrast: number; // 0-2, 1 is normal
+    exposure: number; // 0-2, 1 is normal
     paperThickness: 'none' | 'light' | 'medium' | 'heavy' | 'dedicated';
     preprocessFilter: 'none' | 'portrait' | 'pet' | 'lineplus' | 'auto' | 'draft';
 };
@@ -49,7 +49,11 @@ export const availableFonts = [
 /**
  * Wraps text to fit within a maximum width
  */
-function wrapText(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+function wrapText(
+    ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+): string[] {
     const lines: string[] = [];
 
     // First split by newlines to preserve explicit line breaks
@@ -92,7 +96,7 @@ function wrapText(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContex
 function measureTextBlockHeight(
     ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     block: TextBlock,
-    maxWidth: number
+    maxWidth: number,
 ): number {
     const { style, content } = block;
     const lineHeight = style.fontSize * 1.2; // 1.2 line height multiplier
@@ -115,7 +119,7 @@ function drawTextBlock(
     block: TextBlock,
     y: number,
     maxWidth: number,
-    padding: number
+    padding: number,
 ): number {
     const { style, content } = block;
     const lineHeight = style.fontSize * 1.2;
@@ -167,7 +171,10 @@ export const defaultTextConversionOptions: TextConversionOptions = {
 /**
  * Renders a text document to a PrinterImage
  */
-export async function renderTextDocument(document: TextDocument, options: TextConversionOptions = defaultTextConversionOptions): Promise<PrinterImage> {
+export async function renderTextDocument(
+    document: TextDocument,
+    options: TextConversionOptions = defaultTextConversionOptions,
+): Promise<PrinterImage> {
     const { blocks, paperWidth } = document;
 
     // Padding
@@ -217,31 +224,27 @@ export async function renderTextDocument(document: TextDocument, options: TextCo
     const imageBitmap = await createImageBitmap(canvas);
 
     // Convert to PrinterImage using existing conversion logic
-    const result = await convertImageToBits(
-        imageBitmap,
-        paperWidth,
-        {
-            rotation: 0,
-            threshold: options.threshold,
-            invert: false,
-            algorithm: options.algorithm,
-            contrast: options.contrast,
-            exposure: options.exposure,
-            heightPercentage: 100,
-            widthPercentage: 100,
-            paperThickness: options.paperThickness,
-            preprocessFilter: options.preprocessFilter,
-            filterOrder: 'before-resize',
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high',
-            resizeAlgorithm: 'canvas',
-            sharpenBeforeResize: 'none',
-            sharpenAfterResize: 'none',
-            autoLevels: false,
-            autoContrast: false,
-            autoExposure: false,
-        }
-    );
+    const result = await convertImageToBits(imageBitmap, paperWidth, {
+        rotation: 0,
+        threshold: options.threshold,
+        invert: false,
+        algorithm: options.algorithm,
+        contrast: options.contrast,
+        exposure: options.exposure,
+        heightPercentage: 100,
+        widthPercentage: 100,
+        paperThickness: options.paperThickness,
+        preprocessFilter: options.preprocessFilter,
+        filterOrder: 'before-resize',
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+        resizeAlgorithm: 'canvas',
+        sharpenBeforeResize: 'none',
+        sharpenAfterResize: 'none',
+        autoLevels: false,
+        autoContrast: false,
+        autoExposure: false,
+    });
 
     return result.printerImage;
 }

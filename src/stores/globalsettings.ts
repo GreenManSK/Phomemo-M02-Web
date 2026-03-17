@@ -1,5 +1,5 @@
-import { ref, watch } from 'vue'
-import { defineStore } from 'pinia'
+import { ref, watch } from 'vue';
+import { defineStore } from 'pinia';
 
 export type GlobalSettings = {
     pixelPerLine: number;
@@ -13,7 +13,7 @@ function loadSettings(): GlobalSettings {
     try {
         const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (raw) return JSON.parse(raw);
-    } catch { }
+    } catch {}
     return {
         pixelPerLine: 576,
         cmPerLine: 4.9,
@@ -24,10 +24,13 @@ function loadSettings(): GlobalSettings {
 export const useGlobalSettingsStore = defineStore('global-settings', () => {
     const settings = ref<GlobalSettings>(loadSettings());
 
-    watch(settings, (val) => {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(val));
-    }, { deep: true });
-
+    watch(
+        settings,
+        (val) => {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(val));
+        },
+        { deep: true },
+    );
 
     function setPixelPerLine(val: number) {
         settings.value.pixelPerLine = val;
@@ -48,4 +51,3 @@ export const useGlobalSettingsStore = defineStore('global-settings', () => {
         setShowAllBluetoothDevices,
     };
 });
-

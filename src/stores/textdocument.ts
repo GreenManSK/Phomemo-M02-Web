@@ -21,7 +21,7 @@ export const useTextDocumentStore = defineStore('text-document', () => {
      * Update an existing text block
      */
     function updateBlock(id: string, updates: Partial<TextBlock>) {
-        const index = textBlocks.value.findIndex(b => b.id === id);
+        const index = textBlocks.value.findIndex((b) => b.id === id);
         if (index !== -1) {
             textBlocks.value[index] = { ...textBlocks.value[index], ...updates };
         }
@@ -31,14 +31,14 @@ export const useTextDocumentStore = defineStore('text-document', () => {
      * Delete a text block by ID
      */
     function deleteBlock(id: string) {
-        textBlocks.value = textBlocks.value.filter(b => b.id !== id);
+        textBlocks.value = textBlocks.value.filter((b) => b.id !== id);
     }
 
     /**
      * Reorder blocks based on array of IDs
      */
     function reorderBlocks(newOrder: string[]) {
-        textBlocks.value.forEach(block => {
+        textBlocks.value.forEach((block) => {
             const newIndex = newOrder.indexOf(block.id);
             if (newIndex !== -1) {
                 block.order = newIndex;

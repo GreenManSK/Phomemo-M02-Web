@@ -100,7 +100,7 @@ export async function applyFilter(image: ImageBitmap, filterType: FilterType): P
         const outputImageData = new ImageData(
             new Uint8ClampedArray(result.data),
             result.cols,
-            result.rows
+            result.rows,
         );
 
         return outputImageData;
@@ -181,15 +181,7 @@ function petFilter(src: any): any {
 
     // Apply adaptive threshold
     let thresh = new cv.Mat();
-    cv.adaptiveThreshold(
-        gray,
-        thresh,
-        255,
-        cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv.THRESH_BINARY,
-        11,
-        2
-    );
+    cv.adaptiveThreshold(gray, thresh, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
 
     // Convert back to RGBA
     let result = new cv.Mat();
@@ -239,7 +231,7 @@ function linePlusFilter(src: any): any {
         cv.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv.THRESH_BINARY,
         15,
-        3
+        3,
     );
 
     // Convert back to RGBA
@@ -336,7 +328,7 @@ export async function applyAutoLevels(image: ImageBitmap): Promise<ImageData> {
         const outputImageData = new ImageData(
             new Uint8ClampedArray(result.data),
             result.cols,
-            result.rows
+            result.rows,
         );
         return outputImageData;
     } finally {
@@ -360,21 +352,27 @@ export async function applyAutoContrast(image: ImageBitmap): Promise<ImageData> 
     ctx.drawImage(image, 0, 0);
     const imageData = ctx.getImageData(0, 0, image.width, image.height);
 
-    console.log(`[applyAutoContrast] ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`);
+    console.log(
+        `[applyAutoContrast] ImageData: ${imageData.width}x${imageData.height}, data length: ${imageData.data.length}`,
+    );
 
     const src = cv.matFromImageData(imageData);
     let result: any;
 
     try {
         result = autoContrastFilter(src);
-        console.log(`[applyAutoContrast] Result mat: ${result.cols}x${result.rows}, channels: ${result.channels()}, type: ${result.type()}`);
+        console.log(
+            `[applyAutoContrast] Result mat: ${result.cols}x${result.rows}, channels: ${result.channels()}, type: ${result.type()}`,
+        );
 
         const outputImageData = new ImageData(
             new Uint8ClampedArray(result.data),
             result.cols,
-            result.rows
+            result.rows,
         );
-        console.log(`[applyAutoContrast] Output ImageData: ${outputImageData.width}x${outputImageData.height}, data length: ${outputImageData.data.length}`);
+        console.log(
+            `[applyAutoContrast] Output ImageData: ${outputImageData.width}x${outputImageData.height}, data length: ${outputImageData.data.length}`,
+        );
         return outputImageData;
     } finally {
         src.delete();
@@ -403,7 +401,7 @@ export async function applyAutoExposure(image: ImageBitmap): Promise<ImageData> 
         const outputImageData = new ImageData(
             new Uint8ClampedArray(result.data),
             result.cols,
-            result.rows
+            result.rows,
         );
         return outputImageData;
     } finally {
@@ -437,14 +435,7 @@ function autoLevelsFilter(src: any): any {
         let mask = new cv.Mat();
         let srcVec = new cv.MatVector();
         srcVec.push_back(channel);
-        cv.calcHist(
-            srcVec,
-            [0],
-            mask,
-            hist,
-            [256],
-            [0, 256]
-        );
+        cv.calcHist(srcVec, [0], mask, hist, [256], [0, 256]);
         srcVec.delete();
 
         // Find min and max with 1% cutoff (ignore extreme outliers)
@@ -539,7 +530,9 @@ function autoContrastFilter(src: any): any {
         const alpha = 255.0 / (globalMax - globalMin);
         const beta = -globalMin * alpha;
         cv.convertScaleAbs(rgb, stretched, alpha, beta);
-        console.log(`Auto Contrast: Applied stretch - alpha=${alpha.toFixed(3)}, beta=${beta.toFixed(3)}`);
+        console.log(
+            `Auto Contrast: Applied stretch - alpha=${alpha.toFixed(3)}, beta=${beta.toFixed(3)}`,
+        );
     } else {
         // Flat image (all same value), return original
         stretched = rgb.clone();
@@ -601,7 +594,10 @@ function autoExposureFilter(src: any): any {
  * Applies unsharp masking with adjustable strength
  * Best applied after resize for thermal printing
  */
-export async function applySharpen(image: ImageBitmap, strength: SharpenStrength): Promise<ImageData> {
+export async function applySharpen(
+    image: ImageBitmap,
+    strength: SharpenStrength,
+): Promise<ImageData> {
     if (strength === 'none') {
         const canvas = new OffscreenCanvas(image.width, image.height);
         const ctx = canvas.getContext('2d');
@@ -632,7 +628,7 @@ export async function applySharpen(image: ImageBitmap, strength: SharpenStrength
         const outputImageData = new ImageData(
             new Uint8ClampedArray(result.data),
             result.cols,
-            result.rows
+            result.rows,
         );
 
         return outputImageData;
@@ -651,8 +647,8 @@ function sharpenFilter(src: any, strength: SharpenStrength): any {
 
     // Determine sharpening parameters based on strength
     let blurSigma: number;
-    let alpha: number;  // Weight for original image
-    let beta: number;   // Weight for blurred image (negative for sharpening)
+    let alpha: number; // Weight for original image
+    let beta: number; // Weight for blurred image (negative for sharpening)
 
     switch (strength) {
         case 'light':
@@ -753,12 +749,12 @@ function increaseContrast(mat: any, factor: number) {
  */
 export function getFilterName(filterType: FilterType): string {
     const names: Record<FilterType, string> = {
-        'none': 'None',
-        'portrait': 'Portrait',
-        'pet': 'Pet',
-        'lineplus': 'Line+',
-        'auto': 'Auto',
-        'draft': 'Draft'
+        none: 'None',
+        portrait: 'Portrait',
+        pet: 'Pet',
+        lineplus: 'Line+',
+        auto: 'Auto',
+        draft: 'Draft',
     };
     return names[filterType];
 }

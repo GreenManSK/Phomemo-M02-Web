@@ -1,4 +1,4 @@
-import type { PrinterImage } from "./printerimage";
+import type { PrinterImage } from './printerimage';
 
 export class PhomemoPrinter {
     private port?: SerialPort;
@@ -18,23 +18,23 @@ export class PhomemoPrinter {
     async disconnect(): Promise<void> {
         if (this.reader && !this.reader.closed) {
             this.reader.releaseLock();
-            await this.reader.cancel().catch(() => { });
+            await this.reader.cancel().catch(() => {});
             this.reader = undefined;
         }
         if (this.writer && !this.writer.closed) {
             this.writer.releaseLock();
-            await this.writer.close().catch(() => { });
+            await this.writer.close().catch(() => {});
             this.writer = undefined;
         }
         if (this.port) {
-            await this.port.close().catch(() => { });
+            await this.port.close().catch(() => {});
             this.port = undefined;
         }
     }
 
     async getFirmwareVersion(): Promise<string> {
         if (!this.port || !this.writer || !this.reader) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1F, 0x11, 0x07]));
+        await this.writer.write(new Uint8Array([0x1f, 0x11, 0x07]));
         const { value } = await this.reader.read();
         if (value && value.length >= 5) {
             return `${value[4]}.${value[3]}.${value[2]}`;
@@ -45,7 +45,7 @@ export class PhomemoPrinter {
 
     async getBatteryLevel(): Promise<number> {
         if (!this.port || !this.writer || !this.reader) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1F, 0x11, 0x08]));
+        await this.writer.write(new Uint8Array([0x1f, 0x11, 0x08]));
         const { value } = await this.reader.read();
         if (value && value.length >= 3) {
             return value[2];
@@ -56,7 +56,7 @@ export class PhomemoPrinter {
 
     async getSerialNumber(): Promise<number> {
         if (!this.port || !this.writer || !this.reader) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1F, 0x11, 0x13]));
+        await this.writer.write(new Uint8Array([0x1f, 0x11, 0x13]));
         const { value } = await this.reader.read();
         if (value && value.length >= 3) {
             return value[2] | (value[1] << 8) | (value[0] << 16);
@@ -67,7 +67,7 @@ export class PhomemoPrinter {
 
     async getPaperState(): Promise<number> {
         if (!this.port || !this.writer || !this.reader) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1F, 0x11, 0x11]));
+        await this.writer.write(new Uint8Array([0x1f, 0x11, 0x11]));
         const { value } = await this.reader.read();
         if (value && value.length >= 3) {
             return value[2] | (value[1] << 8) | (value[0] << 16);
@@ -78,17 +78,17 @@ export class PhomemoPrinter {
 
     async initializePrinter(): Promise<void> {
         if (!this.port || !this.writer) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1B, 0x40])); // ESC @
+        await this.writer.write(new Uint8Array([0x1b, 0x40])); // ESC @
     }
 
     async resetPrinter(): Promise<void> {
         if (!this.port || !this.writer) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1B, 0x40, 0x02])); // ESC @ 0x02
+        await this.writer.write(new Uint8Array([0x1b, 0x40, 0x02])); // ESC @ 0x02
     }
 
     async alignCenter(): Promise<void> {
         if (!this.port || !this.writer) throw new Error('Not connected to printer');
-        await this.writer.write(new Uint8Array([0x1B, 0x61, 0x01])); // ESC a 1
+        await this.writer.write(new Uint8Array([0x1b, 0x61, 0x01])); // ESC a 1
     }
 
     async printFeedLines(num: number): Promise<void> {
@@ -96,7 +96,7 @@ export class PhomemoPrinter {
         if (num < 0 || num > 255) {
             throw new Error('Number of lines must be between 0 and 255');
         }
-        await this.writer.write(new Uint8Array([0x1B, 0x64, num])); // ESC d num
+        await this.writer.write(new Uint8Array([0x1b, 0x64, num])); // ESC d num
     }
 
     async printImage(image: PrinterImage): Promise<void> {
@@ -115,9 +115,14 @@ export class PhomemoPrinter {
         const height = image.height;
 
         const header = new Uint8Array([
-            0x1D, 0x76, 0x30, mode, // GS v 0
-            byteWidth & 0xFF, (byteWidth >> 8) & 0xFF, // Width in bytes
-            height & 0xFF, (height >> 8) & 0xFF // Height in bytes
+            0x1d,
+            0x76,
+            0x30,
+            mode, // GS v 0
+            byteWidth & 0xff,
+            (byteWidth >> 8) & 0xff, // Width in bytes
+            height & 0xff,
+            (height >> 8) & 0xff, // Height in bytes
         ]);
         const imageData = new Uint8Array(image.bits.length + header.length);
         imageData.set(header, 0);

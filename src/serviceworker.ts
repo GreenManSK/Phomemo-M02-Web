@@ -1,21 +1,23 @@
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
-import { clientsClaim } from 'workbox-core'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
+import { clientsClaim } from 'workbox-core';
 import { registerRoute } from 'workbox-routing';
 
 declare let self: ServiceWorkerGlobalScope;
 
-self.skipWaiting()
-clientsClaim()
+self.skipWaiting();
+clientsClaim();
 
-
-cleanupOutdatedCaches()
-precacheAndRoute(self.__WB_MANIFEST)
+cleanupOutdatedCaches();
+precacheAndRoute(self.__WB_MANIFEST);
 
 function sleepMs(time: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, time));
+    return new Promise((resolve) => setTimeout(resolve, time));
 }
 
-async function getClientById(clientId: string, abortSignal: AbortSignal): Promise<Client | undefined> {
+async function getClientById(
+    clientId: string,
+    abortSignal: AbortSignal,
+): Promise<Client | undefined> {
     while (!abortSignal.aborted) {
         const client = await self.clients.get(clientId);
         if (client) {
@@ -39,7 +41,6 @@ async function sendImageToWebApp(file: File, clientId: string) {
     client.postMessage({ type: 'image_shared', file });
 }
 
-
 async function handleShareTarget(request: Request, event: FetchEvent) {
     console.log('Handling share target request:', request.url, event);
     const formData = await request.formData();
@@ -55,15 +56,17 @@ async function handleShareTarget(request: Request, event: FetchEvent) {
 
     console.log('Received image file:', file.name, file.size, file.type);
     event.waitUntil(sendImageToWebApp(file, event.resultingClientId));
-    return Response.redirect(request.url.replace('/share-target', ''), 303);// https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
+    return Response.redirect(request.url.replace('/share-target', ''), 303); // https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/share_target
 }
 
 registerRoute(
     ({ request }) => request.url.endsWith('/share-target'),
     async ({ event, request }) => handleShareTarget(request, event as FetchEvent),
-    'POST');
+    'POST',
+);
 
 registerRoute(
     ({ request }) => request.url.endsWith('/share-target'),
     async ({ request }) => Response.redirect(request.url.replace('/share-target', ''), 303),
-    'GET');
+    'GET',
+);

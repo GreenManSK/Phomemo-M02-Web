@@ -28,7 +28,7 @@ const tabsWidth = computed(() => {
 watch([canvasRef, props], async () => {
     const canvas = canvasRef.value as HTMLCanvasElement | null;
     if (!canvas || !props.image) return;
-    await new Promise(resolve => requestAnimationFrame(resolve)); // Ensure DOM is updated
+    await new Promise((resolve) => requestAnimationFrame(resolve)); // Ensure DOM is updated
 
     canvas.width = props.image.width;
     canvas.height = props.image.height;
@@ -62,56 +62,56 @@ watch([canvasRef, props], async () => {
 
             // Unroll the 8 bits in this byte for better performance
             // Bit 7 (leftmost)
-            let color = ((byte >> 7) & 1) ? 0 : 255;
+            let color = (byte >> 7) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 6
-            color = ((byte >> 6) & 1) ? 0 : 255;
+            color = (byte >> 6) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 5
-            color = ((byte >> 5) & 1) ? 0 : 255;
+            color = (byte >> 5) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 4
-            color = ((byte >> 4) & 1) ? 0 : 255;
+            color = (byte >> 4) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 3
-            color = ((byte >> 3) & 1) ? 0 : 255;
+            color = (byte >> 3) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 2
-            color = ((byte >> 2) & 1) ? 0 : 255;
+            color = (byte >> 2) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 1
-            color = ((byte >> 1) & 1) ? 0 : 255;
+            color = (byte >> 1) & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
             pixelIndex += 4;
 
             // Bit 0 (rightmost)
-            color = (byte & 1) ? 0 : 255;
+            color = byte & 1 ? 0 : 255;
             data[pixelIndex] = color;
             data[pixelIndex + 1] = color;
             data[pixelIndex + 2] = color;
@@ -121,9 +121,6 @@ watch([canvasRef, props], async () => {
 
     ctx.putImageData(imageData, 0, 0);
 });
-
-
-
 </script>
 
 <template>
@@ -134,9 +131,7 @@ watch([canvasRef, props], async () => {
         <CardContent>
             <Tabs default-value="account" :style="{ width: tabsWidth }">
                 <TabsList>
-                    <TabsTrigger value="account">
-                        Preview
-                    </TabsTrigger>
+                    <TabsTrigger value="account"> Preview </TabsTrigger>
                     <TabsTrigger value="adjusted" :disabled="!props.adjustedImage">
                         Adjusted
                     </TabsTrigger>
@@ -147,20 +142,31 @@ watch([canvasRef, props], async () => {
                         Original
                     </TabsTrigger>
                 </TabsList>
-                <TabsContent value="account" style="width: 100%; height: 100%;">
+                <TabsContent value="account" style="width: 100%; height: 100%">
                     <canvas ref="canvasRef"></canvas>
                 </TabsContent>
                 <TabsContent value="adjusted">
-                    <img :src="props.adjustedImage?.src" alt="Adjusted Image" style="outline: 2px solid #666;" />
+                    <img
+                        :src="props.adjustedImage?.src"
+                        alt="Adjusted Image"
+                        style="outline: 2px solid #666"
+                    />
                 </TabsContent>
                 <TabsContent value="filtered">
-                    <img :src="props.filteredImage?.src" alt="Filtered Image" style="outline: 2px solid #666;" />
+                    <img
+                        :src="props.filteredImage?.src"
+                        alt="Filtered Image"
+                        style="outline: 2px solid #666"
+                    />
                 </TabsContent>
                 <TabsContent value="password">
-                    <img :src="props.originalImage?.src" alt="Original Image" style="outline: 2px solid #666;" />
+                    <img
+                        :src="props.originalImage?.src"
+                        alt="Original Image"
+                        style="outline: 2px solid #666"
+                    />
                 </TabsContent>
             </Tabs>
-
         </CardContent>
     </Card>
 </template>

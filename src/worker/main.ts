@@ -1,5 +1,5 @@
-import { expose } from "comlink";
-import { convertImageToBits } from "@/logic/imagehelper";
+import { expose } from 'comlink';
+import { convertImageToBits } from '@/logic/imagehelper';
 
 const exposedFunction = convertImageToBits;
 expose(exposedFunction);

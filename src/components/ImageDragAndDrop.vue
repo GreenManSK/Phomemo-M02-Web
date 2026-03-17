@@ -53,7 +53,7 @@ function onDrop(e: DragEvent) {
     if (!file) return;
     // Create a synthetic event with a target that matches the expected type
     const syntheticEvent = {
-        target: { files: [file] }
+        target: { files: [file] },
     } as unknown as Event;
     onImage(syntheticEvent);
 }
@@ -72,29 +72,44 @@ function readImageFile(file: File): Promise<HTMLImageElement> {
     });
 }
 
-
 navigator.serviceWorker?.addEventListener('message', async (event) => {
     if (event.data.type === 'image_shared') {
         const file = event.data.file;
-        console.log('Received image file from service worker:', file.name, file.size, file.type, file);
+        console.log(
+            'Received image file from service worker:',
+            file.name,
+            file.size,
+            file.type,
+            file,
+        );
         const image = await readImageFile(file);
         emit('imageLoaded', image);
         hasImage.value = true;
     }
 });
-
 </script>
 
 <template>
-    <Card class="drop-area " @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent="onDrop"
-        :class="{ 'drag-active': isDragActive }">
+    <Card
+        class="drop-area"
+        @dragover.prevent="onDragOver"
+        @dragleave.prevent="onDragLeave"
+        @drop.prevent="onDrop"
+        :class="{ 'drag-active': isDragActive }"
+    >
         <CardHeader class="flex flex-row items-center">
             <ImageIcon class="mr-2" />
             <CardTitle>Select Image</CardTitle>
         </CardHeader>
         <CardContent>
             <label class="file-label cursor-pointer" tabindex="0">
-                <input ref="fileInput" type="file" accept="image/*" @change="(e) => onImage(e)" class="file-input" />
+                <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/*"
+                    @change="(e) => onImage(e)"
+                    class="file-input"
+                />
                 <Button @click="fileInput?.click()">
                     <Upload :size="20" class="inline-block" />
                     choose {{ hasImage ? 'another' : '' }} image

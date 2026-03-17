@@ -1,21 +1,29 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { ref } from 'vue';
+import { defineStore } from 'pinia';
 import { convertImageWorker } from '@/worker/client';
 import type { ImageConversionOptions, PrinterImage } from '@/logic/printerimage';
 import type { ImageConversionResult } from '@/logic/imagehelper';
-
-
 
 export const useImageConvertersStore = defineStore('image-converter', () => {
     const abortController = ref<AbortController | null>(null);
     const convertImageWorkerFn = convertImageWorker();
 
     let lastConversionTime = 0;
-    let pendingConversion: { image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions, resolve: (value: ImageConversionResult) => void, reject: (reason?: any) => void } | null = null;
+    let pendingConversion: {
+        image: ImageBitmap;
+        outputWidthPixel: number;
+        options: ImageConversionOptions;
+        resolve: (value: ImageConversionResult) => void;
+        reject: (reason?: any) => void;
+    } | null = null;
     let throttleTimeout: number | null = null;
 
-    async function convertImageInternal(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
-        abortController.value?.abort()
+    async function convertImageInternal(
+        image: ImageBitmap,
+        outputWidthPixel: number,
+        options: ImageConversionOptions,
+    ): Promise<ImageConversionResult> {
+        abortController.value?.abort();
         const localController = new AbortController();
         abortController.value = localController;
         const optionsPlain = JSON.parse(JSON.stringify(options));
@@ -27,13 +35,19 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
         const endTime = performance.now();
         console.log(`Image conversion took ${endTime - startTime} ms`);
         if (result.printerImage.width !== outputWidthPixel) {
-            console.warn(`Image conversion width mismatch: expected ${outputWidthPixel}, got ${result.printerImage.width}`);
+            console.warn(
+                `Image conversion width mismatch: expected ${outputWidthPixel}, got ${result.printerImage.width}`,
+            );
         }
         lastConversionTime = endTime;
         return result;
     }
 
-    function convertImage(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
+    function convertImage(
+        image: ImageBitmap,
+        outputWidthPixel: number,
+        options: ImageConversionOptions,
+    ): Promise<ImageConversionResult> {
         const now = performance.now();
         const timeSinceLastConversion = now - lastConversionTime;
         const minInterval = 100; // Minimum 100ms between conversions
@@ -67,7 +81,11 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
                     if (pendingConversion) {
                         const current = pendingConversion;
                         pendingConversion = null;
-                        convertImageInternal(current.image, current.outputWidthPixel, current.options)
+                        convertImageInternal(
+                            current.image,
+                            current.outputWidthPixel,
+                            current.options,
+                        )
                             .then(current.resolve)
                             .catch(current.reject);
                     }
@@ -77,5 +95,4 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
     }
 
     return { convertImage };
-})
-
+});

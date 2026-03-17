@@ -1,5 +1,11 @@
-import type { ImageConversionOptions, PrinterImage } from "./printerimage";
-import { applyFilter, applySharpen, applyAutoLevels, applyAutoContrast, applyAutoExposure } from "./phomemofilters";
+import type { ImageConversionOptions, PrinterImage } from './printerimage';
+import {
+    applyFilter,
+    applySharpen,
+    applyAutoLevels,
+    applyAutoContrast,
+    applyAutoExposure,
+} from './phomemofilters';
 
 // @ts-ignore
 import cv from '@techstark/opencv-js';
@@ -62,7 +68,7 @@ async function resizeWithOpenCV(
     image: ImageBitmap,
     targetWidth: number,
     targetHeight: number,
-    algorithm: 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4'
+    algorithm: 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4',
 ): Promise<ImageBitmap> {
     // Ensure OpenCV is loaded
     await waitForOpenCV();
@@ -86,11 +92,11 @@ async function resizeWithOpenCV(
     try {
         // Map algorithm name to OpenCV interpolation flag
         const interpolationMap: Record<string, number> = {
-            'nearest': cv.INTER_NEAREST,
-            'linear': cv.INTER_LINEAR,
-            'cubic': cv.INTER_CUBIC,
-            'area': cv.INTER_AREA,
-            'lanczos4': cv.INTER_LANCZOS4,
+            nearest: cv.INTER_NEAREST,
+            linear: cv.INTER_LINEAR,
+            cubic: cv.INTER_CUBIC,
+            area: cv.INTER_AREA,
+            lanczos4: cv.INTER_LANCZOS4,
         };
 
         const interpolation = interpolationMap[algorithm];
@@ -111,11 +117,7 @@ async function resizeWithOpenCV(
         const resizedCtx = resizedCanvas.getContext('2d');
         if (!resizedCtx) throw new Error('Failed to get resized canvas context');
 
-        const resizedImageData = new ImageData(
-            new Uint8ClampedArray(dst.data),
-            dst.cols,
-            dst.rows
-        );
+        const resizedImageData = new ImageData(new Uint8ClampedArray(dst.data), dst.cols, dst.rows);
         resizedCtx.putImageData(resizedImageData, 0, 0);
 
         // Convert back to ImageBitmap
@@ -131,14 +133,23 @@ async function resizeWithOpenCV(
  * Internal implementation of convertImageToBits
  * This is wrapped by the public function with error handling and retry logic
  */
-async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
+async function convertImageToBitsInternal(
+    image: ImageBitmap,
+    outputWidthPixel: number,
+    options: ImageConversionOptions,
+): Promise<ImageConversionResult> {
     let processedImage: ImageBitmap = image;
     let filteredImageData: ImageData | null = null;
 
     // Apply preprocessing filter if specified AND filterOrder is 'before-resize' (or not specified for backwards compatibility)
-    const shouldFilterBeforeResize = !options.filterOrder || options.filterOrder === 'before-resize';
+    const shouldFilterBeforeResize =
+        !options.filterOrder || options.filterOrder === 'before-resize';
 
-    if (shouldFilterBeforeResize && options.preprocessFilter && options.preprocessFilter !== 'none') {
+    if (
+        shouldFilterBeforeResize &&
+        options.preprocessFilter &&
+        options.preprocessFilter !== 'none'
+    ) {
         console.log(`Applying ${options.preprocessFilter} filter before resize...`);
         const filterStartTime = performance.now();
         filteredImageData = await applyFilter(processedImage, options.preprocessFilter);
@@ -190,9 +201,13 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
 
     let fullOutputHeight: number;
     if (options.rotation === 90 || options.rotation === 270) {
-        fullOutputHeight = Math.round(actualImageWidth * (processedImage.width / processedImage.height));
+        fullOutputHeight = Math.round(
+            actualImageWidth * (processedImage.width / processedImage.height),
+        );
     } else {
-        fullOutputHeight = Math.round(actualImageWidth * (processedImage.height / processedImage.width));
+        fullOutputHeight = Math.round(
+            actualImageWidth * (processedImage.height / processedImage.width),
+        );
     }
 
     // Calculate the actual output height based on heightPercentage
@@ -219,7 +234,7 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
             processedImage,
             targetWidth,
             targetHeight,
-            options.resizeAlgorithm
+            options.resizeAlgorithm,
         );
         console.log(`OpenCV resize completed in ${performance.now() - resizeStartTime}ms`);
     }
@@ -241,7 +256,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    console.log(`Drawing image to canvas: ${processedImage.width}x${processedImage.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide, image at ${widthPercentage}% width) with options:`, options);
+    console.log(
+        `Drawing image to canvas: ${processedImage.width}x${processedImage.height} -> ${canvas.width}x${canvas.height} (${outputWidthPixel} pixels wide, image at ${widthPercentage}% width) with options:`,
+        options,
+    );
 
     // Calculate horizontal offset to center the image
     const xOffset = Math.round((outputWidthPixel - actualImageWidth) / 2);
@@ -284,19 +302,31 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
     if (options.rotation !== 0) {
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(options.rotation * Math.PI / 180);
+        ctx.rotate((options.rotation * Math.PI) / 180);
         if (options.rotation === 90 || options.rotation === 270) {
             // When using OpenCV, image is already resized, so draw at actual size
             if (options.resizeAlgorithm !== 'canvas') {
                 ctx.drawImage(resizedImage, -resizedImage.width / 2, -resizedImage.height / 2);
             } else {
-                ctx.drawImage(resizedImage, -fullOutputHeight / 2, -actualImageWidth / 2, fullOutputHeight, actualImageWidth);
+                ctx.drawImage(
+                    resizedImage,
+                    -fullOutputHeight / 2,
+                    -actualImageWidth / 2,
+                    fullOutputHeight,
+                    actualImageWidth,
+                );
             }
         } else {
             if (options.resizeAlgorithm !== 'canvas') {
                 ctx.drawImage(resizedImage, -resizedImage.width / 2, -resizedImage.height / 2);
             } else {
-                ctx.drawImage(resizedImage, -actualImageWidth / 2, -fullOutputHeight / 2, actualImageWidth, fullOutputHeight);
+                ctx.drawImage(
+                    resizedImage,
+                    -actualImageWidth / 2,
+                    -fullOutputHeight / 2,
+                    actualImageWidth,
+                    fullOutputHeight,
+                );
             }
         }
         ctx.restore();
@@ -317,7 +347,11 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
 
     // Apply preprocessing filter AFTER resize if filterOrder is 'after-resize'
     let sampledImage: ImageData;
-    if (options.filterOrder === 'after-resize' && options.preprocessFilter && options.preprocessFilter !== 'none') {
+    if (
+        options.filterOrder === 'after-resize' &&
+        options.preprocessFilter &&
+        options.preprocessFilter !== 'none'
+    ) {
         console.log(`Applying ${options.preprocessFilter} filter after resize...`);
         const filterStartTime = performance.now();
 
@@ -371,8 +405,15 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
 
     // Apply manual contrast and exposure adjustments AFTER all preprocessing and auto adjustments
     // Note: adjustedContrast/adjustedExposure include paper thickness adjustments
-    if (options.contrast !== 1.0 || options.exposure !== 1.0 || adjustedContrast !== 1.0 || adjustedExposure !== 1.0) {
-        console.log(`Applying manual adjustments: contrast=${options.contrast} (adjusted: ${adjustedContrast}), exposure=${options.exposure} (adjusted: ${adjustedExposure})`);
+    if (
+        options.contrast !== 1.0 ||
+        options.exposure !== 1.0 ||
+        adjustedContrast !== 1.0 ||
+        adjustedExposure !== 1.0
+    ) {
+        console.log(
+            `Applying manual adjustments: contrast=${options.contrast} (adjusted: ${adjustedContrast}), exposure=${options.exposure} (adjusted: ${adjustedExposure})`,
+        );
         const manualAdjustCanvas = new OffscreenCanvas(canvas.width, outputHeight);
         const manualAdjustCtx = manualAdjustCanvas.getContext('2d');
         if (!manualAdjustCtx) throw new Error('Failed to get manual adjust canvas context');
@@ -405,15 +446,16 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
         adjustedImageData = sharpenedImageData; // Update display preview with sharpened version
     }
 
-    const bits = new Uint8ClampedArray(outputHeight * outputWidthPixel / 8);
+    const bits = new Uint8ClampedArray((outputHeight * outputWidthPixel) / 8);
 
     switch (options.algorithm) {
         case 'Basic': {
             // Basic threshold algorithm
-            const getPixel = (x: number, y: number): boolean => (
+            const getPixel = (x: number, y: number): boolean =>
                 sampledImage.data[(y * canvas.width + x) * 4] +
-                sampledImage.data[(y * canvas.width + x) * 4 + 1] +
-                sampledImage.data[(y * canvas.width + x) * 4 + 2]) < (adjustedThreshold * 3.0);
+                    sampledImage.data[(y * canvas.width + x) * 4 + 1] +
+                    sampledImage.data[(y * canvas.width + x) * 4 + 2] <
+                adjustedThreshold * 3.0;
 
             for (let y = 0; y < outputHeight; y++) {
                 for (let x = 0; x < outputWidthPixel / 8; x++) {
@@ -421,10 +463,8 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
                         const pixelValue = getPixel(pixelX, y);
-                        const result = options.invert
-                            ? (pixelValue ? 0 : 1)
-                            : (pixelValue ? 1 : 0);
-                        bits[y * outputWidthPixel / 8 + x] |= (result << (7 - bit));
+                        const result = options.invert ? (pixelValue ? 0 : 1) : pixelValue ? 1 : 0;
+                        bits[(y * outputWidthPixel) / 8 + x] |= result << (7 - bit);
                     }
                 }
             }
@@ -439,7 +479,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = (y * canvas.width + x) * 4;
                     grayscale[y * outputWidthPixel + x] =
-                        (sampledImage.data[idx] + sampledImage.data[idx + 1] + sampledImage.data[idx + 2]) / 3.0;
+                        (sampledImage.data[idx] +
+                            sampledImage.data[idx + 1] +
+                            sampledImage.data[idx + 2]) /
+                        3.0;
                 }
             }
 
@@ -455,15 +498,15 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
 
                     // Distribute error to neighboring pixels
                     if (x + 1 < outputWidthPixel) {
-                        grayscale[idx + 1] += error * 7 / 16;
+                        grayscale[idx + 1] += (error * 7) / 16;
                     }
                     if (y + 1 < outputHeight) {
                         if (x > 0) {
-                            grayscale[idx + outputWidthPixel - 1] += error * 3 / 16;
+                            grayscale[idx + outputWidthPixel - 1] += (error * 3) / 16;
                         }
-                        grayscale[idx + outputWidthPixel] += error * 5 / 16;
+                        grayscale[idx + outputWidthPixel] += (error * 5) / 16;
                         if (x + 1 < outputWidthPixel) {
-                            grayscale[idx + outputWidthPixel + 1] += error * 1 / 16;
+                            grayscale[idx + outputWidthPixel + 1] += (error * 1) / 16;
                         }
                     }
                 }
@@ -475,11 +518,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
-                        const result = options.invert
-                            ? (pixelValue ? 0 : 1)
-                            : (pixelValue ? 1 : 0);
-                        bits[y * outputWidthPixel / 8 + x] |= (result << (7 - bit));
+                        const pixelValue =
+                            grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
+                        const result = options.invert ? (pixelValue ? 0 : 1) : pixelValue ? 1 : 0;
+                        bits[(y * outputWidthPixel) / 8 + x] |= result << (7 - bit);
                     }
                 }
             }
@@ -494,7 +536,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = (y * canvas.width + x) * 4;
                     grayscale[y * outputWidthPixel + x] =
-                        (sampledImage.data[idx] + sampledImage.data[idx + 1] + sampledImage.data[idx + 2]) / 3.0;
+                        (sampledImage.data[idx] +
+                            sampledImage.data[idx + 1] +
+                            sampledImage.data[idx + 2]) /
+                        3.0;
                 }
             }
 
@@ -539,11 +584,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
-                        const result = options.invert
-                            ? (pixelValue ? 0 : 1)
-                            : (pixelValue ? 1 : 0);
-                        bits[y * outputWidthPixel / 8 + x] |= (result << (7 - bit));
+                        const pixelValue =
+                            grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
+                        const result = options.invert ? (pixelValue ? 0 : 1) : pixelValue ? 1 : 0;
+                        bits[(y * outputWidthPixel) / 8 + x] |= result << (7 - bit);
                     }
                 }
             }
@@ -552,14 +596,14 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
         case 'Bayer': {
             // Ordered dithering using 8x8 Bayer matrix
             const bayerMatrix8x8 = [
-                [ 0, 32,  8, 40,  2, 34, 10, 42],
+                [0, 32, 8, 40, 2, 34, 10, 42],
                 [48, 16, 56, 24, 50, 18, 58, 26],
-                [12, 44,  4, 36, 14, 46,  6, 38],
+                [12, 44, 4, 36, 14, 46, 6, 38],
                 [60, 28, 52, 20, 62, 30, 54, 22],
-                [ 3, 35, 11, 43,  1, 33,  9, 41],
+                [3, 35, 11, 43, 1, 33, 9, 41],
                 [51, 19, 59, 27, 49, 17, 57, 25],
-                [15, 47,  7, 39, 13, 45,  5, 37],
-                [63, 31, 55, 23, 61, 29, 53, 21]
+                [15, 47, 7, 39, 13, 45, 5, 37],
+                [63, 31, 55, 23, 61, 29, 53, 21],
             ];
 
             // Convert to bits using Bayer threshold
@@ -570,7 +614,11 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                         if (pixelX >= outputWidthPixel) break;
 
                         const idx = (y * canvas.width + pixelX) * 4;
-                        const gray = (sampledImage.data[idx] + sampledImage.data[idx + 1] + sampledImage.data[idx + 2]) / 3.0;
+                        const gray =
+                            (sampledImage.data[idx] +
+                                sampledImage.data[idx + 1] +
+                                sampledImage.data[idx + 2]) /
+                            3.0;
 
                         // Get Bayer threshold for this pixel position
                         const bayerValue = bayerMatrix8x8[y % 8][pixelX % 8];
@@ -581,10 +629,8 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                         const finalThreshold = adjustedThreshold + bayerOffset;
 
                         const pixelValue = gray < finalThreshold;
-                        const result = options.invert
-                            ? (pixelValue ? 0 : 1)
-                            : (pixelValue ? 1 : 0);
-                        bits[y * outputWidthPixel / 8 + x] |= (result << (7 - bit));
+                        const result = options.invert ? (pixelValue ? 0 : 1) : pixelValue ? 1 : 0;
+                        bits[(y * outputWidthPixel) / 8 + x] |= result << (7 - bit);
                     }
                 }
             }
@@ -599,7 +645,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                 for (let x = 0; x < outputWidthPixel; x++) {
                     const idx = (y * canvas.width + x) * 4;
                     grayscale[y * outputWidthPixel + x] =
-                        (sampledImage.data[idx] + sampledImage.data[idx + 1] + sampledImage.data[idx + 2]) / 3.0;
+                        (sampledImage.data[idx] +
+                            sampledImage.data[idx + 1] +
+                            sampledImage.data[idx + 2]) /
+                        3.0;
                 }
             }
 
@@ -617,7 +666,7 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                     //     * 2/4
                     // 1/4 1/4
                     if (x + 1 < outputWidthPixel) {
-                        grayscale[idx + 1] += error * 2 / 4;
+                        grayscale[idx + 1] += (error * 2) / 4;
                     }
                     if (y + 1 < outputHeight) {
                         if (x > 0) {
@@ -634,11 +683,10 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
                     for (let bit = 0; bit < 8; bit++) {
                         const pixelX = x * 8 + bit;
                         if (pixelX >= outputWidthPixel) break;
-                        const pixelValue = grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
-                        const result = options.invert
-                            ? (pixelValue ? 0 : 1)
-                            : (pixelValue ? 1 : 0);
-                        bits[y * outputWidthPixel / 8 + x] |= (result << (7 - bit));
+                        const pixelValue =
+                            grayscale[y * outputWidthPixel + pixelX] < adjustedThreshold;
+                        const result = options.invert ? (pixelValue ? 0 : 1) : pixelValue ? 1 : 0;
+                        bits[(y * outputWidthPixel) / 8 + x] |= result << (7 - bit);
                     }
                 }
             }
@@ -647,18 +695,22 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
     }
 
     if (canvas.width !== outputWidthPixel) {
-        throw new Error(`Canvas width ${canvas.width} does not match output width ${outputWidthPixel}`);
+        throw new Error(
+            `Canvas width ${canvas.width} does not match output width ${outputWidthPixel}`,
+        );
     }
 
-    console.log(`Image converted to bits: ${outputWidthPixel} pixels wide, ${outputHeight} pixels high`);
+    console.log(
+        `Image converted to bits: ${outputWidthPixel} pixels wide, ${outputHeight} pixels high`,
+    );
     return {
         printerImage: {
             width: outputWidthPixel,
             height: outputHeight,
-            bits: bits
+            bits: bits,
         },
         adjustedImageData,
-        filteredImageData
+        filteredImageData,
     };
 }
 
@@ -666,7 +718,11 @@ async function convertImageToBitsInternal(image: ImageBitmap, outputWidthPixel: 
  * Public API: Convert image to bits with error handling and retry logic
  * Catches OpenCV errors and retries from scratch if needed
  */
-export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: number, options: ImageConversionOptions): Promise<ImageConversionResult> {
+export async function convertImageToBits(
+    image: ImageBitmap,
+    outputWidthPixel: number,
+    options: ImageConversionOptions,
+): Promise<ImageConversionResult> {
     const maxRetries = 1;
     let lastError: any = null;
 
@@ -675,7 +731,7 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             if (attempt > 0) {
                 console.warn(`⚠️ Retry attempt ${attempt} after OpenCV error...`);
                 // Wait a bit before retry to let things settle
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise((resolve) => setTimeout(resolve, 100));
             }
 
             // Attempt conversion
@@ -688,8 +744,12 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
             return result;
         } catch (error) {
             lastError = error;
-            const errorMessage = typeof error === 'number' ? `OpenCV Error ${error}` : String(error);
-            console.error(`❌ Image conversion failed (attempt ${attempt + 1}/${maxRetries + 1}):`, errorMessage);
+            const errorMessage =
+                typeof error === 'number' ? `OpenCV Error ${error}` : String(error);
+            console.error(
+                `❌ Image conversion failed (attempt ${attempt + 1}/${maxRetries + 1}):`,
+                errorMessage,
+            );
 
             if (attempt < maxRetries) {
                 // Try to clean up OpenCV state
@@ -704,20 +764,22 @@ export async function convertImageToBits(image: ImageBitmap, outputWidthPixel: n
                 }
             } else {
                 // Final failure - user needs to refresh
-                alert(`❌ Image Conversion Failed\n\nPlease refresh the page to continue.\n\n(Error: ${errorMessage})`);
+                alert(
+                    `❌ Image Conversion Failed\n\nPlease refresh the page to continue.\n\n(Error: ${errorMessage})`,
+                );
             }
         }
     }
 
     // All retries failed
-    const errorMessage = typeof lastError === 'number'
-        ? `OpenCV Error ${lastError}. Try refreshing the page or using a simpler image.`
-        : `Conversion failed: ${lastError}`;
+    const errorMessage =
+        typeof lastError === 'number'
+            ? `OpenCV Error ${lastError}. Try refreshing the page or using a simpler image.`
+            : `Conversion failed: ${lastError}`;
 
     console.error('💥 All retry attempts failed. Last error:', lastError);
     throw new Error(errorMessage);
 }
-
 
 export function loadImageFromUrl(url: string): Promise<ImageBitmap> {
     return new Promise<ImageBitmap>((resolve, error) => {
@@ -727,5 +789,3 @@ export function loadImageFromUrl(url: string): Promise<ImageBitmap> {
         img.src = url;
     });
 }
-
-

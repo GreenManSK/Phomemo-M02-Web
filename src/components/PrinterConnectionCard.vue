@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import {
-    Card,
-    CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 
-import { Wifi, WifiOff, Loader2, BatteryFull, BatteryLow, BatteryMedium, Battery } from 'lucide-vue-next';
+import {
+    Wifi,
+    WifiOff,
+    Loader2,
+    BatteryFull,
+    BatteryLow,
+    BatteryMedium,
+    Battery,
+} from 'lucide-vue-next';
 
 import { ref } from 'vue';
 import Button from './ui/button/Button.vue';
@@ -62,16 +67,22 @@ async function connectToPrinter() {
             <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-4">
                     <span class="icon-stack relative inline-block w-5 h-5">
-                        <Wifi class="absolute top-0 left-0 transition-opacity duration-300"
-                            :style="{ opacity: printer.isConnected ? 1 : 0 }" color="#16a34a" :size="20" />
-                        <WifiOff class="absolute top-0 left-0 transition-opacity duration-300"
-                            :style="{ opacity: printer.isConnected ? 0 : 1 }" color="#666" :size="20" />
+                        <Wifi
+                            class="absolute top-0 left-0 transition-opacity duration-300"
+                            :style="{ opacity: printer.isConnected ? 1 : 0 }"
+                            color="#16a34a"
+                            :size="20"
+                        />
+                        <WifiOff
+                            class="absolute top-0 left-0 transition-opacity duration-300"
+                            :style="{ opacity: printer.isConnected ? 0 : 1 }"
+                            color="#666"
+                            :size="20"
+                        />
                     </span>
                     <div>
-                        <h2 class="text-lg font-semibold">
-                            Printer Connection Status
-                        </h2>
-                        <div style="display: flex; gap: 8px; align-items: center;">
+                        <h2 class="text-lg font-semibold">Printer Connection Status</h2>
+                        <div style="display: flex; gap: 8px; align-items: center">
                             <span>
                                 {{ printer.isConnected ? 'Printer ready' : 'Tap to connect' }}
                             </span>
@@ -79,10 +90,18 @@ async function connectToPrinter() {
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger>
-                                            <BatteryFull v-if="printer.printerBattery > 75" class="battery-icon" />
-                                            <BatteryMedium v-else-if="printer.printerBattery > 50"
-                                                class="battery-icon" />
-                                            <BatteryLow v-else-if="printer.printerBattery > 25" class="battery-icon" />
+                                            <BatteryFull
+                                                v-if="printer.printerBattery > 75"
+                                                class="battery-icon"
+                                            />
+                                            <BatteryMedium
+                                                v-else-if="printer.printerBattery > 50"
+                                                class="battery-icon"
+                                            />
+                                            <BatteryLow
+                                                v-else-if="printer.printerBattery > 25"
+                                                class="battery-icon"
+                                            />
                                             <Battery v-else color="red" class="battery-icon" />
                                         </TooltipTrigger>
                                         <TooltipContent>
@@ -92,7 +111,6 @@ async function connectToPrinter() {
                                 </TooltipProvider>
                             </span>
                         </div>
-
                     </div>
                 </div>
                 <Button @click="connectToPrinter" :disabled="isLoading">
