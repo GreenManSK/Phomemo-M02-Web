@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import 'vue-sonner/style.css'
+import 'vue-sonner/style.css';
 
 import ImagePreview from './components/ImagePreview.vue';
 import ImageDragAndDrop from './components/ImageDragAndDrop.vue';
@@ -12,19 +12,26 @@ import PrintButton from './components/PrintButton.vue';
 import TextEditorCard from './components/TextEditorCard.vue';
 
 import { Printer, RotateCcw } from 'lucide-vue-next';
-import { Toaster } from '@/components/ui/sonner'
+import { Toaster } from '@/components/ui/sonner';
 import Button from './components/ui/button/Button.vue';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-import { defaultImageConversionOptions, type ImageConversionOptions, type PrinterImage } from './logic/printerimage.ts';
+import {
+    defaultImageConversionOptions,
+    type ImageConversionOptions,
+    type PrinterImage,
+} from './logic/printerimage.ts';
 import { useImageConvertersStore } from './stores/imageconverter.ts';
 import { useGlobalSettingsStore } from './stores/globalsettings.ts';
 import { usePrinterStore } from './stores/printer.ts';
 import { useTextDocumentStore } from './stores/textdocument.ts';
-import { renderTextDocument, type TextDocument, type TextConversionOptions, defaultTextConversionOptions } from './logic/textprinter.ts';
+import {
+    renderTextDocument,
+    type TextDocument,
+    type TextConversionOptions,
+    defaultTextConversionOptions,
+} from './logic/textprinter.ts';
 import { applyFilter } from './logic/phomemofilters.ts';
-
-
 
 const imageDataRef = ref<PrinterImage | null>(null);
 const adjustedImageRef = ref<HTMLImageElement | null>(null);
@@ -50,10 +57,20 @@ function loadSavedSettings(): ImageConversionOptions {
             // Validate the loaded settings have all required fields
             if (parsed && typeof parsed === 'object') {
                 // Validate and normalize resizeAlgorithm (handle old values)
-                const validResizeAlgorithms = ['canvas', 'nearest', 'linear', 'cubic', 'area', 'lanczos4'];
-                let resizeAlgorithm = parsed.resizeAlgorithm ?? defaultImageConversionOptions.resizeAlgorithm;
+                const validResizeAlgorithms = [
+                    'canvas',
+                    'nearest',
+                    'linear',
+                    'cubic',
+                    'area',
+                    'lanczos4',
+                ];
+                let resizeAlgorithm =
+                    parsed.resizeAlgorithm ?? defaultImageConversionOptions.resizeAlgorithm;
                 if (!validResizeAlgorithms.includes(resizeAlgorithm)) {
-                    console.warn(`Invalid resizeAlgorithm "${resizeAlgorithm}" in saved settings, defaulting to "canvas"`);
+                    console.warn(
+                        `Invalid resizeAlgorithm "${resizeAlgorithm}" in saved settings, defaulting to "canvas"`,
+                    );
                     resizeAlgorithm = 'canvas';
                 }
 
@@ -64,16 +81,33 @@ function loadSavedSettings(): ImageConversionOptions {
                     algorithm: parsed.algorithm ?? defaultImageConversionOptions.algorithm,
                     contrast: parsed.contrast ?? defaultImageConversionOptions.contrast,
                     exposure: parsed.exposure ?? defaultImageConversionOptions.exposure,
-                    heightPercentage: parsed.heightPercentage ?? defaultImageConversionOptions.heightPercentage,
-                    widthPercentage: parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
-                    paperThickness: parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
+                    heightPercentage:
+                        parsed.heightPercentage ?? defaultImageConversionOptions.heightPercentage,
+                    widthPercentage:
+                        parsed.widthPercentage ?? defaultImageConversionOptions.widthPercentage,
+                    paperThickness:
+                        parsed.paperThickness ?? defaultImageConversionOptions.paperThickness,
                     preprocessFilter: 'none', // Always start with no filter (not saved)
                     filterOrder: parsed.filterOrder ?? defaultImageConversionOptions.filterOrder,
-                    imageSmoothingEnabled: parsed.imageSmoothingEnabled ?? defaultImageConversionOptions.imageSmoothingEnabled,
-                    imageSmoothingQuality: parsed.imageSmoothingQuality ?? defaultImageConversionOptions.imageSmoothingQuality,
-                    resizeAlgorithm: resizeAlgorithm as 'canvas' | 'nearest' | 'linear' | 'cubic' | 'area' | 'lanczos4',
-                    sharpenBeforeResize: parsed.sharpenBeforeResize ?? defaultImageConversionOptions.sharpenBeforeResize,
-                    sharpenAfterResize: parsed.sharpenAfterResize ?? defaultImageConversionOptions.sharpenAfterResize,
+                    imageSmoothingEnabled:
+                        parsed.imageSmoothingEnabled ??
+                        defaultImageConversionOptions.imageSmoothingEnabled,
+                    imageSmoothingQuality:
+                        parsed.imageSmoothingQuality ??
+                        defaultImageConversionOptions.imageSmoothingQuality,
+                    resizeAlgorithm: resizeAlgorithm as
+                        | 'canvas'
+                        | 'nearest'
+                        | 'linear'
+                        | 'cubic'
+                        | 'area'
+                        | 'lanczos4',
+                    sharpenBeforeResize:
+                        parsed.sharpenBeforeResize ??
+                        defaultImageConversionOptions.sharpenBeforeResize,
+                    sharpenAfterResize:
+                        parsed.sharpenAfterResize ??
+                        defaultImageConversionOptions.sharpenAfterResize,
                     autoLevels: parsed.autoLevels ?? defaultImageConversionOptions.autoLevels,
                     autoContrast: parsed.autoContrast ?? defaultImageConversionOptions.autoContrast,
                     autoExposure: parsed.autoExposure ?? defaultImageConversionOptions.autoExposure,
@@ -97,7 +131,8 @@ function loadSavedTextSettings(): TextConversionOptions {
                     algorithm: parsed.algorithm ?? defaultTextConversionOptions.algorithm,
                     contrast: parsed.contrast ?? defaultTextConversionOptions.contrast,
                     exposure: parsed.exposure ?? defaultTextConversionOptions.exposure,
-                    paperThickness: parsed.paperThickness ?? defaultTextConversionOptions.paperThickness,
+                    paperThickness:
+                        parsed.paperThickness ?? defaultTextConversionOptions.paperThickness,
                     preprocessFilter: 'none', // Always start with no filter (not saved)
                 };
             }
@@ -121,23 +156,31 @@ const lastSourceImage = ref<HTMLImageElement | null>(null);
 const cachedFilteredImage = ref<ImageBitmap | null>(null);
 
 // Save settings to localStorage whenever they change (except preprocessFilter)
-watch(imageConversionOptions, (newOptions) => {
-    try {
-        const { preprocessFilter, ...optionsToSave } = newOptions;
-        localStorage.setItem('imageConversionOptions', JSON.stringify(optionsToSave));
-    } catch (e) {
-        console.warn('Failed to save settings:', e);
-    }
-}, { deep: true });
+watch(
+    imageConversionOptions,
+    (newOptions) => {
+        try {
+            const { preprocessFilter, ...optionsToSave } = newOptions;
+            localStorage.setItem('imageConversionOptions', JSON.stringify(optionsToSave));
+        } catch (e) {
+            console.warn('Failed to save settings:', e);
+        }
+    },
+    { deep: true },
+);
 
-watch(textConversionOptions, (newOptions) => {
-    try {
-        const { preprocessFilter, ...optionsToSave } = newOptions;
-        localStorage.setItem('textConversionOptions', JSON.stringify(optionsToSave));
-    } catch (e) {
-        console.warn('Failed to save text settings:', e);
-    }
-}, { deep: true });
+watch(
+    textConversionOptions,
+    (newOptions) => {
+        try {
+            const { preprocessFilter, ...optionsToSave } = newOptions;
+            localStorage.setItem('textConversionOptions', JSON.stringify(optionsToSave));
+        } catch (e) {
+            console.warn('Failed to save text settings:', e);
+        }
+    },
+    { deep: true },
+);
 
 async function setImage(image: HTMLImageElement) {
     imageRef.value = image;
@@ -187,11 +230,16 @@ watch([imageRef, imageConversionOptions], async () => {
         let filteredImageDataResult: ImageData | null = null;
 
         // Only apply filter here if filterOrder is 'before-resize'
-        const shouldApplyFilterHere = options.filterOrder === 'before-resize' && options.preprocessFilter && options.preprocessFilter !== 'none';
+        const shouldApplyFilterHere =
+            options.filterOrder === 'before-resize' &&
+            options.preprocessFilter &&
+            options.preprocessFilter !== 'none';
 
         if ((filterChanged || imageChanged || filterOrderChanged) && shouldApplyFilterHere) {
             // Need to apply/re-apply the preprocessing filter before resize
-            console.log(`Applying ${options.preprocessFilter} filter before resize (filterChanged: ${filterChanged}, imageChanged: ${imageChanged})...`);
+            console.log(
+                `Applying ${options.preprocessFilter} filter before resize (filterChanged: ${filterChanged}, imageChanged: ${imageChanged})...`,
+            );
             const filterStartTime = performance.now();
 
             const sourceImage = await createImageBitmap(imageRef.value);
@@ -206,7 +254,12 @@ watch([imageRef, imageConversionOptions], async () => {
 
             imageToConvert = cachedFilteredImage.value;
             filteredImageDataResult = filteredImageData;
-        } else if (shouldApplyFilterHere && cachedFilteredImage.value && !imageChanged && !filterOrderChanged) {
+        } else if (
+            shouldApplyFilterHere &&
+            cachedFilteredImage.value &&
+            !imageChanged &&
+            !filterOrderChanged
+        ) {
             // Reuse cached filtered image (only if image and filter order haven't changed)
             console.log(`Reusing cached ${options.preprocessFilter} filter`);
             imageToConvert = cachedFilteredImage.value;
@@ -219,7 +272,11 @@ watch([imageRef, imageConversionOptions], async () => {
                 lastFilterOrder.value = options.filterOrder;
             }
             // Clear cache when filter is set to 'none' or when using 'after-resize' order
-            if (options.preprocessFilter === 'none' || !options.preprocessFilter || options.filterOrder === 'after-resize') {
+            if (
+                options.preprocessFilter === 'none' ||
+                !options.preprocessFilter ||
+                options.filterOrder === 'after-resize'
+            ) {
                 cachedFilteredImage.value = null;
             }
             imageToConvert = await createImageBitmap(imageRef.value);
@@ -228,10 +285,15 @@ watch([imageRef, imageConversionOptions], async () => {
         // Convert to printer image
         // If filterOrder is 'before-resize', set preprocessFilter to 'none' since we've already applied it
         // If filterOrder is 'after-resize', keep preprocessFilter so it's applied after resize in imagehelper
-        const conversionOptions = options.filterOrder === 'before-resize'
-            ? { ...options, preprocessFilter: 'none' as const }
-            : options;
-        const result = await converterStore.convertImage(imageToConvert, appSettings.settings.pixelPerLine, conversionOptions);
+        const conversionOptions =
+            options.filterOrder === 'before-resize'
+                ? { ...options, preprocessFilter: 'none' as const }
+                : options;
+        const result = await converterStore.convertImage(
+            imageToConvert,
+            appSettings.settings.pixelPerLine,
+            conversionOptions,
+        );
         imageDataRef.value = result.printerImage;
 
         // Convert adjusted ImageData to HTMLImageElement
@@ -278,37 +340,44 @@ watch([imageRef, imageConversionOptions], async () => {
 });
 
 // Watch text document changes and render to preview
-watch([() => textDocumentStore.textBlocks, currentText, currentStyle, textConversionOptions], async () => {
-    // Create blocks array including current text being edited (if any)
-    const blocks = [...textDocumentStore.textBlocks];
+watch(
+    [() => textDocumentStore.textBlocks, currentText, currentStyle, textConversionOptions],
+    async () => {
+        // Create blocks array including current text being edited (if any)
+        const blocks = [...textDocumentStore.textBlocks];
 
-    // Add temporary block for current text (for live preview)
-    if (currentText.value.trim() && currentStyle.value) {
-        blocks.push({
-            id: 'temp-preview',
-            content: currentText.value,
-            style: currentStyle.value,
-            order: blocks.length,
-        });
-    }
+        // Add temporary block for current text (for live preview)
+        if (currentText.value.trim() && currentStyle.value) {
+            blocks.push({
+                id: 'temp-preview',
+                content: currentText.value,
+                style: currentStyle.value,
+                order: blocks.length,
+            });
+        }
 
-    // If no blocks and no current text, clear preview
-    if (blocks.length === 0) {
-        textPreviewImage.value = null;
-        return;
-    }
+        // If no blocks and no current text, clear preview
+        if (blocks.length === 0) {
+            textPreviewImage.value = null;
+            return;
+        }
 
-    try {
-        const document: TextDocument = {
-            blocks,
-            paperWidth: appSettings.settings.pixelPerLine,
-        };
-        textPreviewImage.value = await renderTextDocument(document, textConversionOptions.value);
-    } catch (error) {
-        console.error('Failed to render text document:', error);
-        textPreviewImage.value = null;
-    }
-}, { deep: true });
+        try {
+            const document: TextDocument = {
+                blocks,
+                paperWidth: appSettings.settings.pixelPerLine,
+            };
+            textPreviewImage.value = await renderTextDocument(
+                document,
+                textConversionOptions.value,
+            );
+        } catch (error) {
+            console.error('Failed to render text document:', error);
+            textPreviewImage.value = null;
+        }
+    },
+    { deep: true },
+);
 
 async function printContent() {
     try {
@@ -342,7 +411,6 @@ function restartApp() {
     }
     componentKey.value += 1; // Force re-mount of conversion cards to reset UI controls
 }
-
 </script>
 
 <template>
@@ -356,7 +424,12 @@ function restartApp() {
                 <p class="app-subtitle">Mobile Recipe Printer</p>
             </div>
             <div class="app-settings-corner">
-                <Button @click="restartApp" variant="outline" size="icon" title="Reset conversion settings to defaults">
+                <Button
+                    @click="restartApp"
+                    variant="outline"
+                    size="icon"
+                    title="Reset conversion settings to defaults"
+                >
                     <RotateCcw :size="20" />
                 </Button>
                 <AppSettings />
@@ -370,7 +443,9 @@ function restartApp() {
             </TabsList>
 
             <TabsContent value="image" class="space-y-6">
-                <PrinterConnectionCard :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices" />
+                <PrinterConnectionCard
+                    :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices"
+                />
                 <ImageDragAndDrop @imageLoaded="(image) => setImage(image)" />
                 <ImageConversionCard
                     :key="componentKey"
@@ -380,13 +455,22 @@ function restartApp() {
                     :pixel-per-line="appSettings.settings.pixelPerLine"
                     :cm-per-line="appSettings.settings.cmPerLine"
                     :is-processing="isProcessingImage"
-                    @image-conversion-options-change="(options) => imageConversionOptions = options" />
+                    @image-conversion-options-change="
+                        (options) => (imageConversionOptions = options)
+                    "
+                />
             </TabsContent>
 
             <TabsContent value="text" class="space-y-6">
-                <PrinterConnectionCard :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices" />
+                <PrinterConnectionCard
+                    :show-all-bluetooth-devices="appSettings.settings.showAllBluetoothDevices"
+                />
                 <TextEditorCard @current-text-change="onCurrentTextChange" />
-                <TextConversionCard :key="componentKey" :initial-options="textConversionOptions" @text-conversion-options-change="(options) => textConversionOptions = options" />
+                <TextConversionCard
+                    :key="componentKey"
+                    :initial-options="textConversionOptions"
+                    @text-conversion-options-change="(options) => (textConversionOptions = options)"
+                />
             </TabsContent>
         </Tabs>
 
@@ -396,10 +480,10 @@ function restartApp() {
                 :original-image="activeTab === 'image' ? imageRef : null"
                 :adjusted-image="activeTab === 'image' ? adjustedImageRef : null"
                 :filtered-image="activeTab === 'image' ? filteredImageRef : null"
-                style="width: 100%;"
+                style="width: 100%"
             />
             <PrintButton
-                style="width: 100%;"
+                style="width: 100%"
                 :image-selected="activeTab === 'image' ? !!imageDataRef : !!textPreviewImage"
                 :connected="printerStore.isConnected"
                 @print="printContent"
@@ -414,8 +498,8 @@ function restartApp() {
 main {
     display: grid;
     grid-template-areas:
-        "header header"
-        "settings preview";
+        'header header'
+        'settings preview';
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto 1fr;
     gap: 2rem;
@@ -500,9 +584,9 @@ main > :deep(.settings-panel) {
 @media (max-width: 768px) {
     main {
         grid-template-areas:
-            "header"
-            "settings"
-            "preview";
+            'header'
+            'settings'
+            'preview';
         grid-template-columns: 1fr;
         grid-template-rows: auto auto 1fr;
         gap: 1.5rem;

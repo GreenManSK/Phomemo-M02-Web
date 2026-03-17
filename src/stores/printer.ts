@@ -1,8 +1,7 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
+import { ref } from 'vue';
+import { defineStore } from 'pinia';
 import { PhomemoPrinter } from '@/logic/phomemo';
 import type { PrinterImage } from '@/logic/printerimage';
-
 
 export const usePrinterStore = defineStore('printer', () => {
     const printer = ref(new PhomemoPrinter());
@@ -19,10 +18,9 @@ export const usePrinterStore = defineStore('printer', () => {
         isConnected.value = false;
     }
 
-
     async function connectPrinter(showAllBluetoothDevices = false) {
         resetPrinter();
-        await printer.value.connect(showAllBluetoothDevices)
+        await printer.value.connect(showAllBluetoothDevices);
         printerBattery.value = await printer.value.getBatteryLevel();
         printerFirmwareVersion.value = await printer.value.getFirmwareVersion();
         printerSerialNumber.value = await printer.value.getSerialNumber();
@@ -35,15 +33,20 @@ export const usePrinterStore = defineStore('printer', () => {
     }
 
     async function disconnectPrinter() {
-        await printer.value.disconnect()
+        await printer.value.disconnect();
         resetPrinter();
     }
 
     return {
-        printer, connectPrinter, printerBattery, printerFirmwareVersion, printerSerialNumber, isConnected,
+        printer,
+        connectPrinter,
+        printerBattery,
+        printerFirmwareVersion,
+        printerSerialNumber,
+        isConnected,
         printImage,
 
         disconnectPrinter,
         isSupported: Boolean(navigator.serial),
-    }
-})
+    };
+});
