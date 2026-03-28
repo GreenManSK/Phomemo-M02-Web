@@ -50,7 +50,7 @@ export const useImageConvertersStore = defineStore('image-converter', () => {
     ): Promise<ImageConversionResult> {
         const now = performance.now();
         const timeSinceLastConversion = now - lastConversionTime;
-        const minInterval = 100; // Minimum 100ms between conversions
+        const minInterval = 500; // Minimum 100ms between conversions
 
         return new Promise((resolve, reject) => {
             // Clear any pending conversion
