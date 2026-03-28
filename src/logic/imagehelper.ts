@@ -764,7 +764,7 @@ export async function convertImageToBits(
                 }
             } else {
                 // Final failure - user needs to refresh
-                alert(
+                window.alert(
                     `❌ Image Conversion Failed\n\nPlease refresh the page to continue.\n\n(Error: ${errorMessage})`,
                 );
             }
